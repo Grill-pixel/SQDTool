@@ -30,6 +30,23 @@ pdf_folder = os.path.join(os.path.dirname(__file__), "PDFs")
 os.makedirs(pdf_folder, exist_ok=True)
 pdf_filename = "OM_Effectif_Pretes_2025_2026.pdf"
 composition_file = os.path.join(os.path.dirname(__file__), "composition.json")
+settings_file = os.path.join(os.path.dirname(__file__), "settings.json")
+
+default_settings = {
+    "club_name": "Olympique de Marseille",
+    "season": "2025-2026",
+    "theme": "Azur & Or"
+}
+settings = default_settings.copy()
+
+if os.path.exists(settings_file):
+    try:
+        with open(settings_file, "r", encoding="utf-8") as f:
+            stored_settings = json.load(f)
+        settings.update({k: v for k, v in stored_settings.items() if k in settings})
+        logging.debug("Paramètres chargés depuis settings.json")
+    except Exception as e:
+        logging.error(f"Erreur chargement settings : {e}")
 
 headers = ['Joueur', 'Poste', 'Âge', 'Nationalité', 'Statut', 'Option d’achat']
 
@@ -85,7 +102,7 @@ class PDF(FPDF):
         self.set_font('DejaVu', 'B', 16)
         self.set_fill_color(0, 51, 102)
         self.set_text_color(255, 255, 255)
-        self.cell(0, 10, 'Olympique de Marseille 2025-2026', 0, 1, 'C', 1)
+        self.cell(0, 10, f"{settings['club_name']} {settings['season']}", 0, 1, 'C', 1)
         self.ln(5)
 
     def footer(self):
@@ -305,24 +322,213 @@ def view_edit_composition():
 # Interface principale
 # -----------------------------
 root = tk.Tk()
-root.title("OM Dashboard")
-root.geometry("900x620")
-root.minsize(820, 560)
+root.title(f"{settings['club_name']} Dashboard")
+root.geometry("980x700")
+root.minsize(880, 620)
 root.configure(bg="#F4F6FA")
 
 style = ttk.Style(root)
 style.theme_use("clam")
-style.configure("Header.TLabel", font=("Segoe UI", 18, "bold"), background="#F4F6FA", foreground="#002B5B")
-style.configure("Section.TLabel", font=("Segoe UI", 12, "bold"))
-style.configure("TButton", font=("Segoe UI", 10), padding=6)
-style.configure("Card.TFrame", background="white")
-style.configure("CardTitle.TLabel", background="white", font=("Segoe UI", 11, "bold"))
 
-main = ttk.Frame(root, padding=20)
+themes = {
+    "Azur & Or": {
+        "bg": "#F3F6FF",
+        "card": "#FFFFFF",
+        "primary": "#0D3B66",
+        "accent": "#F4D35E",
+        "text": "#1A1F2B",
+        "muted": "#5A6B82",
+        "button": "#0D3B66",
+        "button_text": "#FFFFFF"
+    },
+    "Soleil & Mer": {
+        "bg": "#FFF8F0",
+        "card": "#FFFFFF",
+        "primary": "#FF7A00",
+        "accent": "#4CB7FF",
+        "text": "#2B2B2B",
+        "muted": "#6B7280",
+        "button": "#FF7A00",
+        "button_text": "#FFFFFF"
+    },
+    "Émeraude Nuit": {
+        "bg": "#F1F7F4",
+        "card": "#FFFFFF",
+        "primary": "#0F766E",
+        "accent": "#134E4A",
+        "text": "#0F172A",
+        "muted": "#64748B",
+        "button": "#0F766E",
+        "button_text": "#FFFFFF"
+    },
+    "Lavande Moderne": {
+        "bg": "#F7F4FF",
+        "card": "#FFFFFF",
+        "primary": "#6D28D9",
+        "accent": "#F59E0B",
+        "text": "#1F2937",
+        "muted": "#6B7280",
+        "button": "#6D28D9",
+        "button_text": "#FFFFFF"
+    },
+    "Ardoise & Cuivre": {
+        "bg": "#F3F4F6",
+        "card": "#FFFFFF",
+        "primary": "#374151",
+        "accent": "#D97706",
+        "text": "#111827",
+        "muted": "#6B7280",
+        "button": "#374151",
+        "button_text": "#FFFFFF"
+    },
+    "Rosé Sport": {
+        "bg": "#FFF1F2",
+        "card": "#FFFFFF",
+        "primary": "#BE123C",
+        "accent": "#EC4899",
+        "text": "#1F2937",
+        "muted": "#6B7280",
+        "button": "#BE123C",
+        "button_text": "#FFFFFF"
+    },
+    "Forêt & Sable": {
+        "bg": "#F6F4EF",
+        "card": "#FFFFFF",
+        "primary": "#2F5D50",
+        "accent": "#C9A66B",
+        "text": "#1E293B",
+        "muted": "#6B7280",
+        "button": "#2F5D50",
+        "button_text": "#FFFFFF"
+    },
+    "Tech Indigo": {
+        "bg": "#EEF2FF",
+        "card": "#FFFFFF",
+        "primary": "#4338CA",
+        "accent": "#22D3EE",
+        "text": "#1E1B4B",
+        "muted": "#64748B",
+        "button": "#4338CA",
+        "button_text": "#FFFFFF"
+    },
+    "Menthe & Graphite": {
+        "bg": "#F0FDFA",
+        "card": "#FFFFFF",
+        "primary": "#0F172A",
+        "accent": "#2DD4BF",
+        "text": "#0F172A",
+        "muted": "#64748B",
+        "button": "#0F172A",
+        "button_text": "#FFFFFF"
+    },
+    "Rouge Urbain": {
+        "bg": "#FFF5F5",
+        "card": "#FFFFFF",
+        "primary": "#B91C1C",
+        "accent": "#F97316",
+        "text": "#1F2937",
+        "muted": "#6B7280",
+        "button": "#B91C1C",
+        "button_text": "#FFFFFF"
+    },
+    "Océan Profond": {
+        "bg": "#EFF6FF",
+        "card": "#FFFFFF",
+        "primary": "#1E3A8A",
+        "accent": "#38BDF8",
+        "text": "#0F172A",
+        "muted": "#64748B",
+        "button": "#1E3A8A",
+        "button_text": "#FFFFFF"
+    },
+    "Citrus Graphique": {
+        "bg": "#FFFBEB",
+        "card": "#FFFFFF",
+        "primary": "#B45309",
+        "accent": "#65A30D",
+        "text": "#1F2937",
+        "muted": "#6B7280",
+        "button": "#B45309",
+        "button_text": "#FFFFFF"
+    }
+}
+
+def apply_theme(theme_name):
+    palette = themes.get(theme_name, themes["Azur & Or"])
+    root.configure(bg=palette["bg"])
+    style.configure("Header.TLabel", font=("Segoe UI", 20, "bold"), background=palette["bg"], foreground=palette["primary"])
+    style.configure("Section.TLabel", font=("Segoe UI", 12, "bold"), background=palette["card"], foreground=palette["primary"])
+    style.configure("TLabel", background=palette["bg"], foreground=palette["text"])
+    style.configure("Muted.TLabel", background=palette["card"], foreground=palette["muted"])
+    style.configure("TButton", font=("Segoe UI", 10), padding=8, background=palette["button"], foreground=palette["button_text"])
+    style.map("TButton", background=[("active", palette["accent"])], foreground=[("active", palette["text"])])
+    style.configure("Card.TFrame", background=palette["card"])
+    style.configure("CardTitle.TLabel", background=palette["card"], font=("Segoe UI", 11, "bold"), foreground=palette["primary"])
+    style.configure("TEntry", fieldbackground="#FFFFFF", background=palette["card"], foreground=palette["text"])
+    style.configure("TCombobox", fieldbackground="#FFFFFF", background=palette["card"], foreground=palette["text"])
+    style.configure("TFrame", background=palette["bg"])
+    settings["theme"] = theme_name
+    save_settings()
+
+def save_settings():
+    try:
+        with open(settings_file, "w", encoding="utf-8") as f:
+            json.dump(settings, f, ensure_ascii=False, indent=2)
+        logging.debug("Paramètres sauvegardés")
+    except Exception as e:
+        logging.error(f"Erreur sauvegarde settings : {e}")
+
+main = ttk.Frame(root, padding=22)
 main.pack(fill="both", expand=True)
 
-header = ttk.Label(main, text="Olympique de Marseille - Gestion d'effectif", style="Header.TLabel")
+header = ttk.Label(main, text=f"{settings['club_name']} - Gestion d'effectif", style="Header.TLabel")
 header.pack(anchor="w", pady=(0, 16))
+
+settings_card = ttk.Frame(main, style="Card.TFrame", padding=16)
+settings_card.pack(fill="x", pady=(0, 16))
+ttk.Label(settings_card, text="Paramètres du club", style="CardTitle.TLabel").pack(anchor="w", pady=(0, 8))
+
+settings_grid = ttk.Frame(settings_card)
+settings_grid.pack(fill="x")
+settings_grid.columnconfigure(1, weight=1)
+settings_grid.columnconfigure(3, weight=1)
+
+club_var = tk.StringVar(value=settings["club_name"])
+season_var = tk.StringVar(value=settings["season"])
+theme_var = tk.StringVar(value=settings["theme"])
+
+ttk.Label(settings_grid, text="Nom du club").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
+club_entry = ttk.Entry(settings_grid, textvariable=club_var)
+club_entry.grid(row=0, column=1, sticky="ew", pady=4)
+
+ttk.Label(settings_grid, text="Saison").grid(row=0, column=2, sticky="w", padx=(16, 8), pady=4)
+season_entry = ttk.Entry(settings_grid, textvariable=season_var)
+season_entry.grid(row=0, column=3, sticky="ew", pady=4)
+
+ttk.Label(settings_grid, text="Thème").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
+theme_box = ttk.Combobox(settings_grid, textvariable=theme_var, values=sorted(themes.keys()), state="readonly")
+theme_box.grid(row=1, column=1, sticky="w", pady=4)
+
+def refresh_status():
+    lbl_folder.config(text=f"Dossier PDF : {pdf_folder}")
+    lbl_filename.config(text=f"Nom PDF : {pdf_filename}")
+    lbl_club.config(text=f"Club : {settings['club_name']}")
+    lbl_season.config(text=f"Saison : {settings['season']}")
+
+def update_club_settings():
+    settings["club_name"] = club_var.get().strip() or default_settings["club_name"]
+    settings["season"] = season_var.get().strip() or default_settings["season"]
+    header.config(text=f"{settings['club_name']} - Gestion d'effectif")
+    root.title(f"{settings['club_name']} Dashboard")
+    refresh_status()
+    save_settings()
+
+def on_theme_change(event=None):
+    apply_theme(theme_var.get())
+
+theme_box.bind("<<ComboboxSelected>>", on_theme_change)
+
+ttk.Button(settings_grid, text="Appliquer", command=update_club_settings).grid(row=1, column=3, sticky="e", pady=4)
 
 card = ttk.Frame(main, style="Card.TFrame", padding=16)
 card.pack(fill="x", pady=(0, 16))
@@ -347,6 +553,10 @@ lbl_folder = ttk.Label(status_card, text=f"Dossier PDF : {pdf_folder}")
 lbl_folder.pack(anchor="w")
 lbl_filename = ttk.Label(status_card, text=f"Nom PDF : {pdf_filename}")
 lbl_filename.pack(anchor="w", pady=(4, 0))
+lbl_club = ttk.Label(status_card, text=f"Club : {settings['club_name']}")
+lbl_club.pack(anchor="w", pady=(4, 0))
+lbl_season = ttk.Label(status_card, text=f"Saison : {settings['season']}")
+lbl_season.pack(anchor="w")
 
 footer = ttk.Frame(main)
 footer.pack(fill="x")
@@ -372,5 +582,8 @@ def set_filename():
         pdf_filename = name
         lbl_filename.config(text=f"Nom PDF : {pdf_filename}")
         logging.debug(f"Nom PDF défini : {pdf_filename}")
+
+apply_theme(settings["theme"])
+refresh_status()
 
 root.mainloop()
