@@ -283,12 +283,43 @@ def view_edit_composition():
     tree.bind("<<TreeviewSelect>>", populate_form)
 
     def save_changes():
-        global effectif
+        global effectif, composition_file
         effectif = [list(tree.item(item)['values']) for item in tree.get_children()]
+        save_path = filedialog.asksaveasfilename(
+            title="Enregistrer la composition",
+            defaultextension=".json",
+            filetypes=[("Fichiers JSON", "*.json"), ("Tous les fichiers", "*.*")]
+        )
+        if not save_path:
+            return
+        composition_file = save_path
         with open(composition_file, "w", encoding="utf-8") as f:
             json.dump(effectif, f, ensure_ascii=False, indent=2)
-        logging.debug("Composition sauvegardée")
-        messagebox.showinfo("Succès", "Composition sauvegardée !")
+        logging.debug(f"Composition sauvegardée : {composition_file}")
+        messagebox.showinfo("Succès", f"Composition sauvegardée :\n{composition_file}")
+
+    def load_composition():
+        global effectif, composition_file
+        load_path = filedialog.askopenfilename(
+            title="Charger une composition",
+            filetypes=[("Fichiers JSON", "*.json"), ("Tous les fichiers", "*.*")]
+        )
+        if not load_path:
+            return
+        try:
+            with open(load_path, "r", encoding="utf-8") as f:
+                effectif = json.load(f)
+            composition_file = load_path
+            for item in tree.get_children():
+                tree.delete(item)
+            for row in effectif:
+                tree.insert("", "end", values=row)
+            clear_form()
+            logging.debug(f"Composition chargée : {composition_file}")
+            messagebox.showinfo("Succès", f"Composition chargée :\n{composition_file}")
+        except Exception as e:
+            logging.exception("Erreur chargement composition")
+            messagebox.showerror("Erreur", str(e))
 
     def add_player():
         values = [entries[header].get().strip() for header in headers]
@@ -321,7 +352,8 @@ def view_edit_composition():
 
     footer = ttk.Frame(container)
     footer.pack(fill="x", pady=(12, 0))
-    ttk.Button(footer, text="Sauvegarder", command=save_changes).pack(side="right")
+    ttk.Button(footer, text="Charger un fichier", command=load_composition).pack(side="left")
+    ttk.Button(footer, text="Sauvegarder sous...", command=save_changes).pack(side="right")
 
 # -----------------------------
 # Interface principale
