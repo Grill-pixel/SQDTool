@@ -161,19 +161,24 @@ def add_table(pdf, title, headers, data):
     pdf.set_font('DejaVu', 'B', 12)
     pdf.set_fill_color(200, 200, 200)
     pdf.cell(0, 10, title, 0, 1, 'L', 1)
-    pdf.set_font('DejaVu', 'B', 10)
-
     col_widths = compute_column_widths(pdf, headers, data)
 
-    for w, header in zip(col_widths, headers):
-        pdf.cell(w, 8, header, 1, 0, 'C', 1)
-    pdf.ln()
+    def render_header():
+        pdf.set_font('DejaVu', 'B', 10)
+        for w, header in zip(col_widths, headers):
+            pdf.cell(w, 8, header, 1, 0, 'C', 1)
+        pdf.ln()
+
+    render_header()
     pdf.set_font('DejaVu', '', 10)
     line_height = pdf.font_size * 1.6
     for row in data:
         wrapped_cells = [wrap_text(pdf, item, width) for item, width in zip(row, col_widths)]
         max_lines = max(len(lines) for lines in wrapped_cells)
         row_height = line_height * max_lines
+        if pdf.get_y() + row_height > pdf.page_break_trigger:
+            pdf.add_page()
+            render_header()
         start_x = pdf.l_margin
         start_y = pdf.get_y()
         for width, lines in zip(col_widths, wrapped_cells):
