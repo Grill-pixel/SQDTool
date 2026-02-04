@@ -19,8 +19,9 @@ except ImportError:
     from fpdf import FPDF
 
 PIL_AVAILABLE = importlib.util.find_spec("PIL") is not None
+ImageGrab = None
 if PIL_AVAILABLE:
-    from PIL import Image
+    from PIL import Image, ImageGrab
 
 # -----------------------------
 # Logs
@@ -1134,12 +1135,37 @@ def view_disposition():
         drag_state.update({"type": None, "player": None, "slot_id": None})
 
     def ensure_pillow_available():
-        global PIL_AVAILABLE, Image
+        global PIL_AVAILABLE, Image, ImageGrab
         if PIL_AVAILABLE:
             return
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pillow"])
-        from PIL import Image
+        from PIL import Image, ImageGrab
         PIL_AVAILABLE = True
+
+    def capture_canvas_image():
+        ensure_pillow_available()
+        if not PIL_AVAILABLE:
+            raise RuntimeError("Pillow n'est pas disponible pour l'export PDF.")
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                ps_path = os.path.join(temp_dir, "disposition.ps")
+                canvas.postscript(file=ps_path, colormode="color")
+                image = Image.open(ps_path)
+                image.load()
+                return image.convert("RGB")
+        except Exception:
+            logging.exception("Erreur conversion PostScript, tentative de capture écran.")
+            if ImageGrab is None:
+                raise
+            canvas.update()
+            x = canvas.winfo_rootx()
+            y = canvas.winfo_rooty()
+            width = canvas.winfo_width()
+            height = canvas.winfo_height()
+            if width <= 1 or height <= 1:
+                raise RuntimeError("Surface de canvas invalide pour l'export PDF.")
+            image = ImageGrab.grab(bbox=(x, y, x + width, y + height))
+            return image.convert("RGB")
 
     def export_disposition_pdf():
         schedule_update()
@@ -1156,21 +1182,24 @@ def view_disposition():
         if not filename:
             return
 
-        ensure_pillow_available()
-        with tempfile.TemporaryDirectory() as temp_dir:
-            ps_path = os.path.join(temp_dir, "disposition.ps")
-            png_path = os.path.join(temp_dir, "disposition.png")
-            canvas.postscript(file=ps_path, colormode="color")
-            image = Image.open(ps_path)
-            image = image.convert("RGB")
-            image.save(png_path, "PNG")
+        try:
+            image = capture_canvas_image()
+            with tempfile.TemporaryDirectory() as temp_dir:
+                png_path = os.path.join(temp_dir, "disposition.png")
+                image.save(png_path, "PNG")
 
-            pdf = FPDF(unit="pt", format=[image.width, image.height])
-            pdf.add_page()
-            pdf.image(png_path, 0, 0, image.width, image.height)
-            pdf.output(filename)
+                pdf = FPDF(unit="pt", format=[image.width, image.height])
+                pdf.add_page()
+                pdf.image(png_path, 0, 0, image.width, image.height)
+                pdf.output(filename)
 
-        messagebox.showinfo("PDF généré", f"Disposition exportée vers :\n{filename}")
+            messagebox.showinfo("PDF généré", f"Disposition exportée vers :\n{filename}")
+        except Exception as exc:
+            logging.exception("Erreur export disposition PDF")
+            messagebox.showerror(
+                "Erreur",
+                f"Impossible d'exporter la disposition en PDF.\n{exc}"
+            )
 
     disposition_exporter = export_disposition_pdf
     reset_assignments_button.config(command=reset_assignments)
