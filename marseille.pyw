@@ -3,6 +3,7 @@ import sys
 import logging
 import json
 import subprocess
+import re
 import tempfile
 import importlib.util
 import tkinter as tk
@@ -41,6 +42,7 @@ composition_file = legacy_composition if os.path.exists(legacy_composition) else
 settings_file = os.path.join(os.path.dirname(__file__), "settings.json")
 edit_window = None
 disposition_window = None
+disposition_exporter = None
 
 default_settings = {
     "club_name": "Olympique de Marseille",
@@ -494,9 +496,38 @@ def add_table(pdf, title, headers, data):
         pdf.set_xy(pdf.l_margin, start_y + row_height)
     pdf.ln(5)
 
-def generate_pdf_file():
+def extract_contract_end(statut_text):
+    if not statut_text:
+        return ""
+    text = str(statut_text)
+    match = re.search(r"\b\d{2}/\d{2}/\d{4}\b", text)
+    if match:
+        return match.group(0)
+    match = re.search(r"\b20\d{2}\b", text)
+    if match:
+        return match.group(0)
+    return ""
+
+
+def build_composition_rows():
+    rows = []
+    for row in effectif:
+        if not row:
+            continue
+        joueur = row[0] if len(row) > 0 else ""
+        poste = row[1] if len(row) > 1 else ""
+        age = row[2] if len(row) > 2 else ""
+        nationalite = row[3] if len(row) > 3 else ""
+        statut = row[4] if len(row) > 4 else ""
+        clause = row[5] if len(row) > 5 else ""
+        fin_contrat = extract_contract_end(statut)
+        rows.append([joueur, poste, age, nationalite, statut, clause, fin_contrat])
+    return rows
+
+
+def generate_composition_pdf():
     try:
-        logging.debug("Début génération PDF")
+        logging.debug("Début génération PDF composition")
         pdf = PDF('L', 'mm', 'A4')
         pdf.add_font('DejaVu', '', r'C:\Windows\Fonts\DejaVuSans.ttf', uni=True)
         pdf.add_font('DejaVu', 'B', r'C:\Windows\Fonts\DejaVuSans-Bold.ttf', uni=True)
@@ -504,18 +535,24 @@ def generate_pdf_file():
         pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
 
-        postes = ["Gardien", "DC", "DG", "DL", "MDF", "MC", "Ailier/AC", "AC", "MO"]
-        for poste in postes:
-            data_poste = [row for row in effectif if poste in row[1]]
-            if data_poste:
-                add_table(pdf, f"{poste}s", headers, data_poste)
+        composition_headers = [
+            "Joueur",
+            "Poste",
+            "Âge",
+            "Nationalité",
+            "Type de contrat",
+            "Type de clause",
+            "Fin de contrat"
+        ]
+        data = build_composition_rows()
+        add_table(pdf, "Composition de l'équipe", composition_headers, data)
 
         pdf_path = os.path.join(pdf_folder, pdf_filename)
         pdf.output(pdf_path)
-        logging.debug(f"PDF généré : {pdf_path}")
-        messagebox.showinfo("Succès", f"PDF généré :\n{pdf_path}")
+        logging.debug(f"PDF composition généré : {pdf_path}")
+        messagebox.showinfo("Succès", f"PDF composition généré :\n{pdf_path}")
     except Exception as e:
-        logging.exception("Erreur génération PDF")
+        logging.exception("Erreur génération PDF composition")
         messagebox.showerror("Erreur", str(e))
 
 # -----------------------------
@@ -729,7 +766,7 @@ def view_edit_composition():
 
 
 def view_disposition():
-    global disposition_window
+    global disposition_window, disposition_exporter
     if disposition_window is not None and disposition_window.winfo_exists():
         disposition_window.lift()
         disposition_window.focus_force()
@@ -1135,6 +1172,7 @@ def view_disposition():
 
         messagebox.showinfo("PDF généré", f"Disposition exportée vers :\n{filename}")
 
+    disposition_exporter = export_disposition_pdf
     reset_assignments_button.config(command=reset_assignments)
     reset_positions_button.config(command=reset_positions)
     clear_selection_button.config(command=clear_player_selection)
@@ -1148,6 +1186,17 @@ def view_disposition():
     canvas.bind("<ButtonRelease-1>", on_canvas_release)
     leftover_list.bind("<<ListboxSelect>>", on_leftover_select)
     schedule_update()
+
+
+def export_disposition_from_sidebar():
+    view_disposition()
+    if disposition_exporter:
+        disposition_exporter()
+    else:
+        messagebox.showwarning(
+            "Disposition indisponible",
+            "Ouvre la fenêtre de disposition pour exporter le PDF."
+        )
 
 # -----------------------------
 # Interface principale
@@ -1364,7 +1413,8 @@ sidebar_season.pack(anchor="w", pady=(4, 16))
 ttk.Label(sidebar, text="Navigation", style="SidebarMuted.TLabel").pack(anchor="w", pady=(0, 6))
 ttk.Button(sidebar, text="Tableau effectif", command=view_edit_composition, style="Sidebar.TButton").pack(fill="x", pady=4)
 ttk.Button(sidebar, text="Disposition", command=view_disposition, style="Sidebar.TButton").pack(fill="x", pady=4)
-ttk.Button(sidebar, text="Exporter PDF", command=generate_pdf_file, style="Sidebar.TButton").pack(fill="x", pady=4)
+ttk.Button(sidebar, text="PDF composition", command=generate_composition_pdf, style="Sidebar.TButton").pack(fill="x", pady=4)
+ttk.Button(sidebar, text="PDF disposition", command=export_disposition_from_sidebar, style="Sidebar.TButton").pack(fill="x", pady=4)
 
 ttk.Separator(sidebar).pack(fill="x", pady=16)
 
@@ -1456,11 +1506,12 @@ actions.pack(fill="x")
 actions.columnconfigure(0, weight=1)
 actions.columnconfigure(1, weight=1)
 
-ttk.Button(actions, text="Générer le PDF", command=generate_pdf_file, style="Primary.TButton").grid(row=0, column=0, sticky="ew", padx=(0, 8), pady=6)
-ttk.Button(actions, text="Sélectionner un dossier", command=lambda: select_folder(), style="Secondary.TButton").grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=6)
-ttk.Button(actions, text="Nommer le PDF", command=lambda: set_filename()).grid(row=1, column=0, sticky="ew", padx=(0, 8), pady=6)
-ttk.Button(actions, text="Éditer la composition", command=view_edit_composition).grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=6)
-ttk.Button(actions, text="Disposition", command=view_disposition).grid(row=2, column=0, sticky="ew", padx=(0, 8), pady=6)
+ttk.Button(actions, text="Imprimer la composition", command=generate_composition_pdf, style="Primary.TButton").grid(row=0, column=0, sticky="ew", padx=(0, 8), pady=6)
+ttk.Button(actions, text="Exporter la disposition", command=export_disposition_from_sidebar, style="Secondary.TButton").grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=6)
+ttk.Button(actions, text="Sélectionner un dossier", command=lambda: select_folder(), style="Secondary.TButton").grid(row=1, column=0, sticky="ew", padx=(0, 8), pady=6)
+ttk.Button(actions, text="Nommer le PDF", command=lambda: set_filename()).grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=6)
+ttk.Button(actions, text="Éditer la composition", command=view_edit_composition).grid(row=2, column=0, sticky="ew", padx=(0, 8), pady=6)
+ttk.Button(actions, text="Disposition", command=view_disposition).grid(row=2, column=1, sticky="ew", padx=(8, 0), pady=6)
 
 status_tab.columnconfigure(0, weight=1)
 status_card = ttk.Frame(status_tab, style="Card.TFrame", padding=16)
