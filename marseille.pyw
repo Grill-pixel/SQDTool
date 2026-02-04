@@ -532,6 +532,7 @@ def view_edit_composition():
     edit_win.title("Édition de la composition")
     edit_win.geometry("1200x700")
     edit_win.minsize(1000, 600)
+    edit_win.configure(bg=get_palette()["bg"])
 
     def handle_close():
         global edit_window
@@ -541,21 +542,46 @@ def view_edit_composition():
 
     edit_win.protocol("WM_DELETE_WINDOW", handle_close)
 
-    container = ttk.Frame(edit_win, padding=12)
+    container = ttk.Frame(edit_win, padding=16)
     container.pack(fill="both", expand=True)
 
-    title = ttk.Label(container, text="Gestion de l'effectif", style="Header.TLabel")
-    title.pack(anchor="w", pady=(0, 10))
+    header_frame = ttk.Frame(container)
+    header_frame.pack(fill="x", pady=(0, 12))
+
+    title = ttk.Label(header_frame, text="Gestion de l'effectif", style="Header.TLabel")
+    title.pack(anchor="w")
+    subtitle = ttk.Label(
+        header_frame,
+        text="Ajoute, modifie ou filtre les joueurs pour garder la composition toujours à jour.",
+        style="Subheader.TLabel"
+    )
+    subtitle.pack(anchor="w", pady=(4, 0))
+
+    toolbar = ttk.Frame(container)
+    toolbar.pack(fill="x", pady=(0, 12))
+    toolbar.columnconfigure(1, weight=1)
+
+    ttk.Label(toolbar, text="Recherche rapide").grid(row=0, column=0, sticky="w", padx=(0, 10))
+    search_var = tk.StringVar()
+    search_entry = ttk.Entry(toolbar, textvariable=search_var)
+    search_entry.grid(row=0, column=1, sticky="ew")
+
+    status_var = tk.StringVar(value="0 joueurs")
+    status_label = ttk.Label(toolbar, textvariable=status_var, style="Muted.TLabel")
+    status_label.grid(row=0, column=2, sticky="e", padx=(10, 0))
 
     panes = ttk.Panedwindow(container, orient="horizontal")
     panes.pack(fill="both", expand=True)
 
-    table_frame = ttk.Frame(panes)
-    form_frame = ttk.Frame(panes, padding=(16, 0, 0, 0))
-    panes.add(table_frame, weight=3)
+    table_wrapper = ttk.Labelframe(panes, text="Tableau effectif")
+    form_frame = ttk.Labelframe(panes, text="Fiche joueur", padding=(12, 8))
+    panes.add(table_wrapper, weight=3)
     panes.add(form_frame, weight=2)
 
-    tree = ttk.Treeview(table_frame, columns=headers, show='headings')
+    table_frame = ttk.Frame(table_wrapper)
+    table_frame.pack(fill="both", expand=True, padx=8, pady=8)
+
+    tree = ttk.Treeview(table_frame, columns=headers, show='headings', style="Treeview")
     for h in headers:
         tree.heading(h, text=h)
         tree.column(h, width=150, anchor="center", stretch=True)
@@ -570,21 +596,23 @@ def view_edit_composition():
     table_frame.rowconfigure(0, weight=1)
     table_frame.columnconfigure(0, weight=1)
 
-    for row in effectif:
-        tree.insert("", "end", values=row)
-
-    form_title = ttk.Label(form_frame, text="Fiche joueur", style="Section.TLabel")
-    form_title.grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 10))
-
     entries = {}
-    for idx, header in enumerate(headers, start=1):
+    for idx, header in enumerate(headers, start=0):
         label = ttk.Label(form_frame, text=header)
-        label.grid(row=idx, column=0, sticky="w", pady=4)
+        label.grid(row=idx, column=0, sticky="w", pady=6)
         entry = ttk.Entry(form_frame)
-        entry.grid(row=idx, column=1, sticky="ew", pady=4)
+        entry.grid(row=idx, column=1, sticky="ew", pady=6)
         entries[header] = entry
 
     form_frame.columnconfigure(1, weight=1)
+
+    all_rows = [list(row) for row in effectif]
+
+    def refresh_tree(rows):
+        tree.delete(*tree.get_children())
+        for row in rows:
+            tree.insert("", "end", values=row)
+        status_var.set(f"{len(rows)} joueurs")
 
     def clear_form():
         for entry in entries.values():
@@ -604,7 +632,7 @@ def view_edit_composition():
 
     def save_changes():
         global effectif, composition_file
-        effectif = [list(tree.item(item)['values']) for item in tree.get_children()]
+        effectif = [list(row) for row in all_rows]
         save_path = filedialog.asksaveasfilename(
             title="Enregistrer la composition",
             defaultextension=".json",
@@ -629,10 +657,9 @@ def view_edit_composition():
         try:
             effectif = load_effectif_from_file(load_path)
             composition_file = load_path
-            for item in tree.get_children():
-                tree.delete(item)
-            for row in effectif:
-                tree.insert("", "end", values=row)
+            all_rows.clear()
+            all_rows.extend([list(row) for row in effectif])
+            refresh_tree(all_rows)
             clear_form()
             logging.debug(f"Composition chargée : {composition_file}")
             messagebox.showinfo("Succès", f"Composition chargée :\n{composition_file}")
@@ -645,7 +672,8 @@ def view_edit_composition():
         if not any(values):
             messagebox.showwarning("Données manquantes", "Veuillez renseigner au moins un champ.")
             return
-        tree.insert("", "end", values=values)
+        all_rows.append(values)
+        refresh_tree(all_rows)
         clear_form()
 
     def update_player():
@@ -654,25 +682,50 @@ def view_edit_composition():
             messagebox.showwarning("Sélection manquante", "Sélectionnez un joueur à modifier.")
             return
         values = [entries[header].get().strip() for header in headers]
-        tree.item(selection[0], values=values)
+        selected_values = list(tree.item(selection[0], "values"))
+        updated = False
+        for index, row in enumerate(all_rows):
+            if list(row) == selected_values:
+                all_rows[index] = values
+                updated = True
+                break
+        if not updated:
+            all_rows.append(values)
+        refresh_tree(all_rows)
 
     def delete_player():
-        for item in tree.selection():
-            tree.delete(item)
+        selected_values = [list(tree.item(item, "values")) for item in tree.selection()]
+        all_rows[:] = [row for row in all_rows if list(row) not in selected_values]
+        refresh_tree(all_rows)
+
+    def apply_filter(*_):
+        query = search_var.get().strip().lower()
+        if not query:
+            refresh_tree(all_rows)
+            return
+        filtered = []
+        for row in all_rows:
+            joined = " ".join(str(item) for item in row).lower()
+            if query in joined:
+                filtered.append(row)
+        refresh_tree(filtered)
+
+    search_var.trace_add("write", apply_filter)
+    refresh_tree(all_rows)
 
     btn_group = ttk.Frame(form_frame)
-    btn_group.grid(row=len(headers) + 1, column=0, columnspan=2, sticky="ew", pady=(12, 0))
+    btn_group.grid(row=len(headers), column=0, columnspan=2, sticky="ew", pady=(12, 0))
     btn_group.columnconfigure(0, weight=1)
 
-    ttk.Button(btn_group, text="Ajouter", command=add_player).grid(row=0, column=0, sticky="ew", pady=4)
+    ttk.Button(btn_group, text="Ajouter", command=add_player, style="Primary.TButton").grid(row=0, column=0, sticky="ew", pady=4)
     ttk.Button(btn_group, text="Mettre à jour", command=update_player).grid(row=1, column=0, sticky="ew", pady=4)
     ttk.Button(btn_group, text="Effacer la sélection", command=delete_player).grid(row=2, column=0, sticky="ew", pady=4)
-    ttk.Button(btn_group, text="Réinitialiser le formulaire", command=clear_form).grid(row=3, column=0, sticky="ew", pady=4)
+    ttk.Button(btn_group, text="Réinitialiser le formulaire", command=clear_form, style="Secondary.TButton").grid(row=3, column=0, sticky="ew", pady=4)
 
     footer = ttk.Frame(container)
     footer.pack(fill="x", pady=(12, 0))
     ttk.Button(footer, text="Charger un fichier", command=load_composition).pack(side="left")
-    ttk.Button(footer, text="Sauvegarder sous...", command=save_changes).pack(side="right")
+    ttk.Button(footer, text="Sauvegarder sous...", command=save_changes, style="Primary.TButton").pack(side="right")
 
 
 def view_disposition():
@@ -687,6 +740,7 @@ def view_disposition():
     disp_win.title("Disposition")
     disp_win.geometry("1100x760")
     disp_win.minsize(960, 680)
+    disp_win.configure(bg=get_palette()["bg"])
 
     def handle_close():
         global disposition_window
@@ -699,8 +753,17 @@ def view_disposition():
     container = ttk.Frame(disp_win, padding=16)
     container.pack(fill="both", expand=True)
 
-    title = ttk.Label(container, text="Disposition sur demi-terrain", style="Header.TLabel")
-    title.pack(anchor="w", pady=(0, 12))
+    header_frame = ttk.Frame(container)
+    header_frame.pack(fill="x", pady=(0, 12))
+
+    title = ttk.Label(header_frame, text="Disposition sur demi-terrain", style="Header.TLabel")
+    title.pack(anchor="w")
+    subtitle = ttk.Label(
+        header_frame,
+        text="Glisse les joueurs ou les postes pour créer une disposition claire et exportable.",
+        style="Subheader.TLabel"
+    )
+    subtitle.pack(anchor="w", pady=(4, 0))
 
     content = ttk.Frame(container)
     content.pack(fill="both", expand=True)
@@ -712,48 +775,52 @@ def view_disposition():
     controls.pack(side="right", fill="y")
 
     formation_var = tk.StringVar(value="4-4-2")
-    ttk.Label(controls, text="Disposition").pack(anchor="w")
+    formation_frame = ttk.Labelframe(controls, text="Formation")
+    formation_frame.pack(fill="x", pady=(0, 12))
     formation_box = ttk.Combobox(
-        controls,
+        formation_frame,
         textvariable=formation_var,
         values=sorted(formations.keys()),
         state="readonly"
     )
-    formation_box.pack(fill="x", pady=(4, 12))
+    formation_box.pack(fill="x", padx=8, pady=(8, 4))
+    refresh_button = ttk.Button(formation_frame, text="Rafraîchir l'effectif", style="Secondary.TButton")
+    refresh_button.pack(fill="x", padx=8, pady=(0, 8))
 
-    refresh_button = ttk.Button(controls, text="Rafraîchir l'effectif")
-    refresh_button.pack(fill="x", pady=(0, 12))
-
-    ttk.Label(controls, text="Joueurs non placés").pack(anchor="w")
-    leftover_list = tk.Listbox(controls, height=16)
-    leftover_list.pack(fill="both", expand=False, pady=(4, 12))
+    players_frame = ttk.Labelframe(controls, text="Joueurs non placés")
+    players_frame.pack(fill="both", pady=(0, 12))
+    leftover_list = tk.Listbox(players_frame, height=14)
+    leftover_list.pack(fill="both", expand=True, padx=8, pady=8)
 
     mode_var = tk.StringVar(value="players")
-    ttk.Label(controls, text="Mode").pack(anchor="w")
+    mode_frame = ttk.Labelframe(controls, text="Mode d'interaction")
+    mode_frame.pack(fill="x", pady=(0, 12))
     ttk.Radiobutton(
-        controls,
+        mode_frame,
         text="Placement joueurs",
         value="players",
         variable=mode_var
-    ).pack(anchor="w", pady=(2, 2))
+    ).pack(anchor="w", padx=8, pady=(4, 2))
     ttk.Radiobutton(
-        controls,
+        mode_frame,
         text="Déplacement postes",
         value="slots",
         variable=mode_var
-    ).pack(anchor="w", pady=(0, 12))
+    ).pack(anchor="w", padx=8, pady=(0, 8))
 
     selected_player_var = tk.StringVar(value="Aucun")
-    ttk.Label(controls, text="Joueur sélectionné").pack(anchor="w")
-    ttk.Label(controls, textvariable=selected_player_var, style="Muted.TLabel").pack(anchor="w", pady=(2, 12))
-    clear_selection_button = ttk.Button(controls, text="Effacer sélection")
-    clear_selection_button.pack(fill="x", pady=(0, 12))
+    selection_frame = ttk.Labelframe(controls, text="Sélection")
+    selection_frame.pack(fill="x", pady=(0, 12))
+    ttk.Label(selection_frame, textvariable=selected_player_var, style="Muted.TLabel").pack(anchor="w", padx=8, pady=(6, 6))
+    clear_selection_button = ttk.Button(selection_frame, text="Effacer sélection", style="Secondary.TButton")
+    clear_selection_button.pack(fill="x", padx=8, pady=(0, 8))
 
-    reset_assignments_button = ttk.Button(controls, text="Réinitialiser placements")
-    reset_assignments_button.pack(fill="x", pady=(0, 6))
-
-    reset_positions_button = ttk.Button(controls, text="Réinitialiser postes")
-    reset_positions_button.pack(fill="x", pady=(0, 12))
+    actions_frame = ttk.Labelframe(controls, text="Actions")
+    actions_frame.pack(fill="x", pady=(0, 12))
+    reset_assignments_button = ttk.Button(actions_frame, text="Réinitialiser placements")
+    reset_assignments_button.pack(fill="x", padx=8, pady=(8, 6))
+    reset_positions_button = ttk.Button(actions_frame, text="Réinitialiser postes")
+    reset_positions_button.pack(fill="x", padx=8, pady=(0, 8))
 
     help_text = ttk.Label(
         controls,
@@ -1071,7 +1138,7 @@ def view_disposition():
     reset_assignments_button.config(command=reset_assignments)
     reset_positions_button.config(command=reset_positions)
     clear_selection_button.config(command=clear_player_selection)
-    ttk.Button(controls, text="Exporter en PDF", command=export_disposition_pdf).pack(fill="x", pady=(12, 0))
+    ttk.Button(actions_frame, text="Exporter en PDF", command=export_disposition_pdf, style="Primary.TButton").pack(fill="x", padx=8, pady=(0, 8))
 
     formation_box.bind("<<ComboboxSelected>>", schedule_update)
     refresh_button.config(command=schedule_update)
@@ -1217,20 +1284,42 @@ themes = {
     }
 }
 
+def get_palette(theme_name=None):
+    return themes.get(theme_name or settings.get("theme"), themes["Azur & Or"])
+
 def apply_theme(theme_name):
-    palette = themes.get(theme_name, themes["Azur & Or"])
+    palette = get_palette(theme_name)
     root.configure(bg=palette["bg"])
     style.configure("Header.TLabel", font=("Segoe UI", 20, "bold"), background=palette["bg"], foreground=palette["primary"])
+    style.configure("Subheader.TLabel", font=("Segoe UI", 12, "bold"), background=palette["bg"], foreground=palette["text"])
     style.configure("Section.TLabel", font=("Segoe UI", 12, "bold"), background=palette["card"], foreground=palette["primary"])
     style.configure("TLabel", background=palette["bg"], foreground=palette["text"])
     style.configure("Muted.TLabel", background=palette["card"], foreground=palette["muted"])
-    style.configure("TButton", font=("Segoe UI", 10), padding=8, background=palette["button"], foreground=palette["button_text"])
+    style.configure("Tag.TLabel", font=("Segoe UI", 9, "bold"), background=palette["accent"], foreground=palette["text"], padding=(6, 2))
+    style.configure("TButton", font=("Segoe UI", 10), padding=10, background=palette["button"], foreground=palette["button_text"])
     style.map("TButton", background=[("active", palette["accent"])], foreground=[("active", palette["text"])])
+    style.configure("Primary.TButton", font=("Segoe UI", 10, "bold"), padding=10, background=palette["primary"], foreground=palette["button_text"])
+    style.map("Primary.TButton", background=[("active", palette["accent"])], foreground=[("active", palette["text"])])
+    style.configure("Secondary.TButton", font=("Segoe UI", 10), padding=10, background=palette["card"], foreground=palette["primary"])
+    style.map("Secondary.TButton", background=[("active", palette["accent"])], foreground=[("active", palette["text"])])
+    style.configure("Sidebar.TFrame", background=palette["primary"])
+    style.configure("Sidebar.TLabel", background=palette["primary"], foreground=palette["button_text"], font=("Segoe UI", 11, "bold"))
+    style.configure("SidebarMuted.TLabel", background=palette["primary"], foreground=palette["button_text"], font=("Segoe UI", 9))
+    style.configure("Sidebar.TButton", font=("Segoe UI", 10, "bold"), padding=8, background=palette["accent"], foreground=palette["text"])
+    style.map("Sidebar.TButton", background=[("active", palette["card"])], foreground=[("active", palette["primary"])])
     style.configure("Card.TFrame", background=palette["card"])
     style.configure("CardTitle.TLabel", background=palette["card"], font=("Segoe UI", 11, "bold"), foreground=palette["primary"])
+    style.configure("App.TFrame", background=palette["bg"])
     style.configure("TEntry", fieldbackground="#FFFFFF", background=palette["card"], foreground=palette["text"])
     style.configure("TCombobox", fieldbackground="#FFFFFF", background=palette["card"], foreground=palette["text"])
     style.configure("TFrame", background=palette["bg"])
+    style.configure("TLabelframe", background=palette["bg"], foreground=palette["primary"])
+    style.configure("TLabelframe.Label", background=palette["bg"], foreground=palette["primary"], font=("Segoe UI", 10, "bold"))
+    style.configure("Treeview", font=("Segoe UI", 10), rowheight=28, background=palette["card"], fieldbackground=palette["card"], foreground=palette["text"])
+    style.map("Treeview", background=[("selected", palette["accent"])], foreground=[("selected", palette["text"])])
+    style.configure("TNotebook", background=palette["bg"], borderwidth=0)
+    style.configure("TNotebook.Tab", font=("Segoe UI", 10, "bold"), padding=(14, 8), background=palette["card"], foreground=palette["primary"])
+    style.map("TNotebook.Tab", background=[("selected", palette["accent"])], foreground=[("selected", palette["text"])])
     settings["theme"] = theme_name
     save_settings()
 
@@ -1242,14 +1331,95 @@ def save_settings():
     except Exception as e:
         logging.error(f"Erreur sauvegarde settings : {e}")
 
-main = ttk.Frame(root, padding=22)
-main.pack(fill="both", expand=True)
+def get_effectif_metrics():
+    total = len(effectif)
+    loaned = sum(1 for row in effectif if "prêt" in str(row[4]).lower())
+    ages = []
+    for row in effectif:
+        age_text = str(row[2])
+        digits = [int(x) for x in age_text.replace(" ", "").split("-") if x.isdigit()]
+        if digits:
+            ages.append(sum(digits) / len(digits))
+    avg_age = round(sum(ages) / len(ages), 1) if ages else "-"
+    return total, loaned, avg_age
 
-header = ttk.Label(main, text=f"{settings['club_name']} - Gestion d'effectif", style="Header.TLabel")
-header.pack(anchor="w", pady=(0, 16))
+app = ttk.Frame(root, style="App.TFrame")
+app.pack(fill="both", expand=True)
+app.columnconfigure(1, weight=1)
+app.rowconfigure(0, weight=1)
 
-settings_card = ttk.Frame(main, style="Card.TFrame", padding=16)
-settings_card.pack(fill="x", pady=(0, 16))
+sidebar = ttk.Frame(app, style="Sidebar.TFrame", padding=(18, 24))
+sidebar.grid(row=0, column=0, sticky="ns")
+
+content = ttk.Frame(app, style="App.TFrame", padding=(24, 20))
+content.grid(row=0, column=1, sticky="nsew")
+content.columnconfigure(0, weight=1)
+content.rowconfigure(1, weight=1)
+
+sidebar_title = ttk.Label(sidebar, text=settings["club_name"], style="Sidebar.TLabel")
+sidebar_title.pack(anchor="w")
+sidebar_season = ttk.Label(sidebar, text=f"Saison {settings['season']}", style="SidebarMuted.TLabel")
+sidebar_season.pack(anchor="w", pady=(4, 16))
+
+ttk.Label(sidebar, text="Navigation", style="SidebarMuted.TLabel").pack(anchor="w", pady=(0, 6))
+ttk.Button(sidebar, text="Tableau effectif", command=view_edit_composition, style="Sidebar.TButton").pack(fill="x", pady=4)
+ttk.Button(sidebar, text="Disposition", command=view_disposition, style="Sidebar.TButton").pack(fill="x", pady=4)
+ttk.Button(sidebar, text="Exporter PDF", command=generate_pdf_file, style="Sidebar.TButton").pack(fill="x", pady=4)
+
+ttk.Separator(sidebar).pack(fill="x", pady=16)
+
+ttk.Label(sidebar, text="Actions rapides", style="SidebarMuted.TLabel").pack(anchor="w", pady=(0, 6))
+ttk.Button(sidebar, text="Dossier PDF", command=lambda: select_folder(), style="Sidebar.TButton").pack(fill="x", pady=4)
+ttk.Button(sidebar, text="Nom du PDF", command=lambda: set_filename(), style="Sidebar.TButton").pack(fill="x", pady=4)
+ttk.Button(sidebar, text="Quitter", command=root.destroy, style="Sidebar.TButton").pack(fill="x", pady=(12, 0))
+
+header = ttk.Label(content, text=f"Centre de contrôle · {settings['club_name']}", style="Header.TLabel")
+header.grid(row=0, column=0, sticky="w", pady=(0, 12))
+
+notebook = ttk.Notebook(content)
+notebook.grid(row=1, column=0, sticky="nsew")
+
+overview_tab = ttk.Frame(notebook)
+settings_tab = ttk.Frame(notebook)
+actions_tab = ttk.Frame(notebook)
+status_tab = ttk.Frame(notebook)
+
+notebook.add(overview_tab, text="Aperçu")
+notebook.add(settings_tab, text="Paramètres")
+notebook.add(actions_tab, text="Actions")
+notebook.add(status_tab, text="Statut")
+
+overview_tab.columnconfigure(0, weight=1)
+
+hero_card = ttk.Frame(overview_tab, style="Card.TFrame", padding=18)
+hero_card.grid(row=0, column=0, sticky="ew", pady=(0, 16))
+ttk.Label(hero_card, text="Tableau de bord modernisé", style="CardTitle.TLabel").pack(anchor="w")
+ttk.Label(
+    hero_card,
+    text="Centralise toutes les opérations : effectif, disposition visuelle et exports.",
+    style="Muted.TLabel"
+).pack(anchor="w", pady=(4, 12))
+ttk.Button(hero_card, text="Ouvrir l'éditeur de composition", command=view_edit_composition, style="Primary.TButton").pack(anchor="w")
+
+stats_frame = ttk.Frame(overview_tab)
+stats_frame.grid(row=1, column=0, sticky="ew")
+stats_frame.columnconfigure((0, 1, 2), weight=1)
+
+total_players, loaned_players, avg_age = get_effectif_metrics()
+
+def build_stat_card(parent, title, value):
+    card = ttk.Frame(parent, style="Card.TFrame", padding=16)
+    ttk.Label(card, text=title, style="CardTitle.TLabel").pack(anchor="w")
+    ttk.Label(card, text=value, style="Header.TLabel").pack(anchor="w", pady=(6, 0))
+    return card
+
+build_stat_card(stats_frame, "Joueurs", total_players).grid(row=0, column=0, sticky="ew", padx=(0, 8))
+build_stat_card(stats_frame, "Prêts en cours", loaned_players).grid(row=0, column=1, sticky="ew", padx=8)
+build_stat_card(stats_frame, "Âge moyen", avg_age).grid(row=0, column=2, sticky="ew", padx=(8, 0))
+
+settings_tab.columnconfigure(0, weight=1)
+settings_card = ttk.Frame(settings_tab, style="Card.TFrame", padding=16)
+settings_card.grid(row=0, column=0, sticky="ew", pady=(0, 16))
 ttk.Label(settings_card, text="Paramètres du club", style="CardTitle.TLabel").pack(anchor="w", pady=(0, 8))
 
 settings_grid = ttk.Frame(settings_card)
@@ -1261,29 +1431,67 @@ club_var = tk.StringVar(value=settings["club_name"])
 season_var = tk.StringVar(value=settings["season"])
 theme_var = tk.StringVar(value=settings["theme"])
 
-ttk.Label(settings_grid, text="Nom du club").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
+ttk.Label(settings_grid, text="Nom du club").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=6)
 club_entry = ttk.Entry(settings_grid, textvariable=club_var)
-club_entry.grid(row=0, column=1, sticky="ew", pady=4)
+club_entry.grid(row=0, column=1, sticky="ew", pady=6)
 
-ttk.Label(settings_grid, text="Saison").grid(row=0, column=2, sticky="w", padx=(16, 8), pady=4)
+ttk.Label(settings_grid, text="Saison").grid(row=0, column=2, sticky="w", padx=(16, 8), pady=6)
 season_entry = ttk.Entry(settings_grid, textvariable=season_var)
-season_entry.grid(row=0, column=3, sticky="ew", pady=4)
+season_entry.grid(row=0, column=3, sticky="ew", pady=6)
 
-ttk.Label(settings_grid, text="Thème").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
+ttk.Label(settings_grid, text="Thème").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=6)
 theme_box = ttk.Combobox(settings_grid, textvariable=theme_var, values=sorted(themes.keys()), state="readonly")
-theme_box.grid(row=1, column=1, sticky="w", pady=4)
+theme_box.grid(row=1, column=1, sticky="w", pady=6)
+
+apply_button = ttk.Button(settings_grid, text="Appliquer", command=lambda: update_club_settings(), style="Primary.TButton")
+apply_button.grid(row=1, column=3, sticky="e", pady=6)
+
+actions_tab.columnconfigure(0, weight=1)
+actions_card = ttk.Frame(actions_tab, style="Card.TFrame", padding=16)
+actions_card.grid(row=0, column=0, sticky="ew", pady=(0, 16))
+ttk.Label(actions_card, text="Actions rapides", style="CardTitle.TLabel").pack(anchor="w", pady=(0, 8))
+
+actions = ttk.Frame(actions_card)
+actions.pack(fill="x")
+actions.columnconfigure(0, weight=1)
+actions.columnconfigure(1, weight=1)
+
+ttk.Button(actions, text="Générer le PDF", command=generate_pdf_file, style="Primary.TButton").grid(row=0, column=0, sticky="ew", padx=(0, 8), pady=6)
+ttk.Button(actions, text="Sélectionner un dossier", command=lambda: select_folder(), style="Secondary.TButton").grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=6)
+ttk.Button(actions, text="Nommer le PDF", command=lambda: set_filename()).grid(row=1, column=0, sticky="ew", padx=(0, 8), pady=6)
+ttk.Button(actions, text="Éditer la composition", command=view_edit_composition).grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=6)
+ttk.Button(actions, text="Disposition", command=view_disposition).grid(row=2, column=0, sticky="ew", padx=(0, 8), pady=6)
+
+status_tab.columnconfigure(0, weight=1)
+status_card = ttk.Frame(status_tab, style="Card.TFrame", padding=16)
+status_card.grid(row=0, column=0, sticky="ew")
+ttk.Label(status_card, text="Paramètres actuels", style="CardTitle.TLabel").pack(anchor="w", pady=(0, 8))
+
+lbl_folder = ttk.Label(status_card, text="")
+lbl_folder.pack(anchor="w")
+lbl_filename = ttk.Label(status_card, text="")
+lbl_filename.pack(anchor="w", pady=(4, 0))
+lbl_club = ttk.Label(status_card, text="")
+lbl_club.pack(anchor="w", pady=(4, 0))
+lbl_season = ttk.Label(status_card, text="")
+lbl_season.pack(anchor="w")
+lbl_theme = ttk.Label(status_card, text="")
+lbl_theme.pack(anchor="w", pady=(4, 0))
 
 def refresh_status():
     lbl_folder.config(text=f"Dossier PDF : {pdf_folder}")
     lbl_filename.config(text=f"Nom PDF : {pdf_filename}")
     lbl_club.config(text=f"Club : {settings['club_name']}")
     lbl_season.config(text=f"Saison : {settings['season']}")
+    lbl_theme.config(text=f"Thème : {settings['theme']}")
+    sidebar_title.config(text=settings["club_name"])
+    sidebar_season.config(text=f"Saison {settings['season']}")
 
 def update_club_settings():
     settings["club_name"] = club_var.get().strip() or default_settings["club_name"]
     settings["season"] = season_var.get().strip() or default_settings["season"]
-    header.config(text=f"{settings['club_name']} - Gestion d'effectif")
     root.title(f"{settings['club_name']} Dashboard")
+    header.config(text=f"Centre de contrôle · {settings['club_name']}")
     refresh_status()
     save_settings()
 
@@ -1291,41 +1499,6 @@ def on_theme_change(event=None):
     apply_theme(theme_var.get())
 
 theme_box.bind("<<ComboboxSelected>>", on_theme_change)
-
-ttk.Button(settings_grid, text="Appliquer", command=update_club_settings).grid(row=1, column=3, sticky="e", pady=4)
-
-card = ttk.Frame(main, style="Card.TFrame", padding=16)
-card.pack(fill="x", pady=(0, 16))
-
-card_title = ttk.Label(card, text="Actions rapides", style="CardTitle.TLabel")
-card_title.pack(anchor="w", pady=(0, 8))
-
-actions = ttk.Frame(card)
-actions.pack(fill="x")
-actions.columnconfigure(0, weight=1)
-actions.columnconfigure(1, weight=1)
-
-ttk.Button(actions, text="Générer le PDF", command=generate_pdf_file).grid(row=0, column=0, sticky="ew", padx=(0, 8), pady=6)
-ttk.Button(actions, text="Sélectionner un dossier", command=lambda: select_folder()).grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=6)
-ttk.Button(actions, text="Nommer le PDF", command=lambda: set_filename()).grid(row=1, column=0, sticky="ew", padx=(0, 8), pady=6)
-ttk.Button(actions, text="Éditer la composition", command=view_edit_composition).grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=6)
-ttk.Button(actions, text="Disposition", command=view_disposition).grid(row=2, column=0, sticky="ew", padx=(0, 8), pady=6)
-
-status_card = ttk.Frame(main, style="Card.TFrame", padding=16)
-status_card.pack(fill="x", pady=(0, 16))
-ttk.Label(status_card, text="Paramètres actuels", style="CardTitle.TLabel").pack(anchor="w", pady=(0, 8))
-lbl_folder = ttk.Label(status_card, text=f"Dossier PDF : {pdf_folder}")
-lbl_folder.pack(anchor="w")
-lbl_filename = ttk.Label(status_card, text=f"Nom PDF : {pdf_filename}")
-lbl_filename.pack(anchor="w", pady=(4, 0))
-lbl_club = ttk.Label(status_card, text=f"Club : {settings['club_name']}")
-lbl_club.pack(anchor="w", pady=(4, 0))
-lbl_season = ttk.Label(status_card, text=f"Saison : {settings['season']}")
-lbl_season.pack(anchor="w")
-
-footer = ttk.Frame(main)
-footer.pack(fill="x")
-ttk.Button(footer, text="Quitter", command=root.destroy).pack(side="right")
 
 # -----------------------------
 # Fonctions PDF / nom du fichier / dossier
@@ -1335,7 +1508,7 @@ def select_folder():
     folder_selected = filedialog.askdirectory()
     if folder_selected:
         pdf_folder = folder_selected
-        lbl_folder.config(text=f"Dossier PDF : {pdf_folder}")
+        refresh_status()
         logging.debug(f"Dossier PDF sélectionné : {pdf_folder}")
 
 def set_filename():
@@ -1345,7 +1518,7 @@ def set_filename():
         if not name.lower().endswith(".pdf"):
             name += ".pdf"
         pdf_filename = name
-        lbl_filename.config(text=f"Nom PDF : {pdf_filename}")
+        refresh_status()
         logging.debug(f"Nom PDF défini : {pdf_filename}")
 
 apply_theme(settings["theme"])
