@@ -2,6 +2,8 @@
 
 SQDTool is a lightweight desktop application (Tkinter) that helps football staff organize a squad list, keep the data editable, and export a structured PDF report. The interface includes modern cards, quick actions, and a theme switcher with multiple color palettes.
 
+Languages: [Français](README.md) | [العربية](README.ar.md) | [License](LICENSE)
+
 ## Highlights
 
 - **Editable club name and season** (no hard‑coded “Olympique de Marseille 2025‑2026”).
