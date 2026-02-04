@@ -1,21 +1,51 @@
-# SQDTool – Squad Management Dashboard
+# SQDTool — Modern Squad Management Dashboard
 
-SQDTool is a lightweight desktop application (Tkinter) that helps football staff organize a squad list, keep the data editable, and export a structured PDF report. The interface includes modern cards, quick actions, and a theme switcher with multiple color palettes.
+![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)
+![UI](https://img.shields.io/badge/UI-Tkinter-0F172A)
+![License](https://img.shields.io/badge/License-MIT-10B981)
 
-Languages: [Français](README.md) | [العربية](README.ar.md) | [License](LICENSE)
+**SQDTool** is a Tkinter desktop app to manage a squad, build a tactical layout, and export clean PDFs ready to share. It features a flexible roster editor, an interactive pitch view, and a modern theme system.
 
-## Highlights
+**Languages:** [Français](README.md) · [العربية](README.ar.md) · [License](LICENSE)
 
-- **Editable club name and season** (no hard‑coded “Olympique de Marseille 2025‑2026”).
-- **Full roster editor** with add/update/delete and persistent storage.
-- **PDF export** grouped by positions, ready to share.
-- **Modern UI theming** with 12 curated themes.
-- **Autosave settings** (club name, season, theme).
+---
 
-## Requirements
+## Table of contents
 
-- Python 3.9+
-- Internet access (first run may install `fpdf2` automatically)
+- [Features](#features)
+- [Quick start](#quick-start)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Club settings](#club-settings)
+  - [Squad editor](#squad-editor)
+  - [Disposition (pitch)](#disposition-pitch)
+  - [PDF exports](#pdf-exports)
+- [Files & persistence](#files--persistence)
+- [Customization](#customization)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
+
+---
+
+## Features
+
+- **Full squad management**: add, edit, delete players in seconds.
+- **Interactive tactical disposition**: place players and reposition slots manually.
+- **Squad PDF**: structured by positions.
+- **Disposition PDF**: a faithful export of the on-screen pitch.
+- **Modern themes**: 12 built-in palettes, auto-save settings.
+- **Persistent settings**: club name, season, and theme.
+
+---
+
+## Quick start
+
+1. Launch the app: `python marseille.pyw`.
+2. Edit the roster in **Edit composition**.
+3. Arrange the team in **Disposition**.
+4. Export PDFs for the squad and the pitch.
+
+---
 
 ## Installation
 
@@ -25,46 +55,58 @@ cd SQDTool
 python marseille.pyw
 ```
 
-> On first run, the app installs `fpdf2` via `pip` if it is missing.
+> On first run, **fpdf2** is installed automatically if needed. The disposition export installs **Pillow** if required.
 
-## Main Features
+---
 
-### 1) Club and Season Settings
-Use the **“Paramètres du club”** card to edit:
+## Usage
 
-- **Nom du club** (club name)
-- **Saison** (season string)
-- **Thème** (theme selector)
+### Club settings
+In **Club settings**, you can edit:
 
-Click **Appliquer** to save and update the title, status panel, and PDF header.
+- **Club name**
+- **Season**
+- **Theme**
 
-### 2) Theme Switcher
-The dropdown offers 12 palettes (e.g., “Azur & Or”, “Lavande Moderne”, “Océan Profond”). The chosen theme updates the interface immediately and is saved for next launch.
+Click **Apply** to refresh the interface and exports.
 
-### 3) Roster Editor
-Click **Éditer la composition** to open the editor:
+### Squad editor
+Open **Edit composition** to:
 
-- Add, update, or remove players.
-- Data is stored in `composition.json` for persistence.
-- The editor behaves like a simple spreadsheet (table + form).
+- Add a player (name, role, age, nationality, status, option).
+- Update existing rows.
+- Delete selected entries.
+- Save the composition as JSON.
 
-### 4) PDF Export
-Click **Générer le PDF** to export the roster.
+### Disposition (pitch)
+The **Disposition** view lets you build a tactical layout on a half pitch:
 
-- Automatically groups players by position.
-- Uses the current club name and season in the PDF header.
-- PDF is saved to the selected folder (default: `PDFs/`).
+- **Player placement mode**: select a player, then click a slot.
+- **Slot movement mode**: drag slots to fine-tune spacing.
+- **Refresh roster**: reloads the squad list if it changes.
+- **Reset**: clear placements or slot positions.
 
-## Files and Persistence
+### PDF exports
 
-- `composition.json`: roster data saved locally.
-- `settings.json`: club name, season, and selected theme.
-- `om_program_logs.txt`: local debug logs.
-- `PDFs/`: export directory.
+- **Squad PDF**: use **Generate PDF** (grouped by roles).
+- **Disposition PDF**: use **Export to PDF** inside the disposition window.
+
+The disposition PDF is a **faithful snapshot** of the pitch (slots, names, layout).
+
+---
+
+## Files & persistence
+
+- `composition.json` (or `effectifOM.json`): squad data.
+- `settings.json`: club name, season, theme.
+- `om_program_logs.txt`: runtime logs.
+- `PDFs/`: PDF exports.
+
+---
 
 ## Customization
 
-To add new themes, edit the `themes` dictionary in `marseille.pyw`:
+Add a theme in `marseille.pyw` under the `themes` dictionary:
 
 ```python
 "My Theme": {
@@ -79,12 +121,16 @@ To add new themes, edit the `themes` dictionary in `marseille.pyw`:
 }
 ```
 
+---
+
 ## Troubleshooting
 
-- **FPDF installation fails**: Run `pip install fpdf2` manually.
-- **No PDF output**: Ensure the selected folder is writable.
-- **Fonts on non‑Windows systems**: Adjust font paths in `generate_pdf_file()` to available fonts.
+- **PDF export error**: ensure internet access for the initial install of `fpdf2` and `pillow`.
+- **Missing PDF**: confirm the export folder you selected.
+- **Truncated labels**: expand the window before exporting the disposition.
+
+---
 
 ## License
 
-This project is licensed under the MIT License. See `LICENSE` for details.
+This project is released under the MIT license. See `LICENSE`.

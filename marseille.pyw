@@ -3,6 +3,8 @@ import sys
 import logging
 import json
 import subprocess
+import tempfile
+import importlib.util
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk, simpledialog
 
@@ -14,6 +16,10 @@ try:
 except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "fpdf2"])
     from fpdf import FPDF
+
+PIL_AVAILABLE = importlib.util.find_spec("PIL") is not None
+if PIL_AVAILABLE:
+    from PIL import Image
 
 # -----------------------------
 # Logs
@@ -1023,9 +1029,49 @@ def view_disposition():
                 assign_player_to_slot(drag_state["player"], slot_id)
         drag_state.update({"type": None, "player": None, "slot_id": None})
 
+    def ensure_pillow_available():
+        global PIL_AVAILABLE, Image
+        if PIL_AVAILABLE:
+            return
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pillow"])
+        from PIL import Image
+        PIL_AVAILABLE = True
+
+    def export_disposition_pdf():
+        schedule_update()
+        disp_win.update_idletasks()
+        canvas.update()
+
+        filename = filedialog.asksaveasfilename(
+            title="Enregistrer la disposition en PDF",
+            initialdir=pdf_folder,
+            defaultextension=".pdf",
+            filetypes=[("PDF", "*.pdf")],
+            initialfile=f"Disposition_{formation_var.get()}.pdf"
+        )
+        if not filename:
+            return
+
+        ensure_pillow_available()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ps_path = os.path.join(temp_dir, "disposition.ps")
+            png_path = os.path.join(temp_dir, "disposition.png")
+            canvas.postscript(file=ps_path, colormode="color")
+            image = Image.open(ps_path)
+            image = image.convert("RGB")
+            image.save(png_path, "PNG")
+
+            pdf = FPDF(unit="pt", format=[image.width, image.height])
+            pdf.add_page()
+            pdf.image(png_path, 0, 0, image.width, image.height)
+            pdf.output(filename)
+
+        messagebox.showinfo("PDF généré", f"Disposition exportée vers :\n{filename}")
+
     reset_assignments_button.config(command=reset_assignments)
     reset_positions_button.config(command=reset_positions)
     clear_selection_button.config(command=clear_player_selection)
+    ttk.Button(controls, text="Exporter en PDF", command=export_disposition_pdf).pack(fill="x", pady=(12, 0))
 
     formation_box.bind("<<ComboboxSelected>>", schedule_update)
     refresh_button.config(command=schedule_update)
