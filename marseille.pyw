@@ -158,25 +158,57 @@ def load_effectif_from_file(path):
     return normalized
 
 
+def normalize_poste_text(value):
+    if not value:
+        return ""
+    text = str(value).lower()
+    replacements = {
+        "é": "e",
+        "è": "e",
+        "ê": "e",
+        "ë": "e",
+        "à": "a",
+        "â": "a",
+        "î": "i",
+        "ï": "i",
+        "ô": "o",
+        "ö": "o",
+        "ù": "u",
+        "û": "u",
+        "ü": "u",
+        "ç": "c",
+        "‑": "-",
+        "–": "-",
+    }
+    return "".join(replacements.get(char, char) for char in text)
+
+
 def map_poste_to_role(poste):
-    poste_lower = poste.lower()
-    if "gardien" in poste_lower:
+    poste_lower = normalize_poste_text(poste)
+    if "gardien" in poste_lower or "goal" in poste_lower:
         return "GK"
-    if "dc" in poste_lower:
-        return "CB"
-    if "dg" in poste_lower:
-        return "LB"
-    if "dl" in poste_lower:
-        return "RB"
-    if "mdf" in poste_lower:
-        return "DM"
-    if "mc" in poste_lower:
-        return "CM"
-    if "mo" in poste_lower:
-        return "AM"
-    if "ailier" in poste_lower:
+    if "defenseur" in poste_lower or "arriere" in poste_lower:
+        if "central" in poste_lower or "axe" in poste_lower or "axial" in poste_lower or "dc" in poste_lower:
+            return "CB"
+        if "gauche" in poste_lower or "dg" in poste_lower:
+            return "LB"
+        if "droit" in poste_lower or "dl" in poste_lower:
+            return "RB"
+    if "lateral" in poste_lower:
+        if "gauche" in poste_lower or "dg" in poste_lower:
+            return "LB"
+        if "droit" in poste_lower or "dl" in poste_lower:
+            return "RB"
+    if "milieu" in poste_lower or "mid" in poste_lower:
+        if "defensif" in poste_lower or "sentinelle" in poste_lower or "mdf" in poste_lower:
+            return "DM"
+        if "offensif" in poste_lower or "meneur" in poste_lower or "mo" in poste_lower:
+            return "AM"
+        if "central" in poste_lower or "relayeur" in poste_lower or "mc" in poste_lower:
+            return "CM"
+    if "ailier" in poste_lower or "exterieur" in poste_lower or "couloir" in poste_lower:
         return "W"
-    if "ac" in poste_lower:
+    if "avant" in poste_lower or "attaquant" in poste_lower or "buteur" in poste_lower or "neuf" in poste_lower or "ac" in poste_lower:
         return "ST"
     return "OTHER"
 
@@ -186,6 +218,20 @@ def line_positions(count, padding=0.1):
         return [0.5]
     step = (1 - 2 * padding) / (count - 1)
     return [padding + step * idx for idx in range(count)]
+
+
+def line_positions_for_line(count, line_type):
+    if line_type in {"att", "am"}:
+        if count == 2:
+            return [0.42, 0.58]
+        if count == 3:
+            return [0.25, 0.5, 0.75]
+        return line_positions(count, padding=0.2)
+    if line_type == "dm":
+        return line_positions(count, padding=0.2)
+    if line_type == "def":
+        return line_positions(count, padding=0.08)
+    return line_positions(count, padding=0.12)
 
 
 def roles_for_line(count, line_type):
@@ -224,7 +270,7 @@ def roles_for_line(count, line_type):
 
 def build_formation_slots(formation_key):
     counts = formations.get(formation_key, [4, 4, 2])
-    slots = [{"role": "GK", "x": 0.5, "y": 0.1}]
+    slots = [{"id": "slot-0", "role": "GK", "x": 0.5, "y": 0.1}]
     if len(counts) == 3:
         line_types = ["def", "mid", "att"]
         y_values = [0.28, 0.55, 0.82]
@@ -237,9 +283,9 @@ def build_formation_slots(formation_key):
 
     for count, line_type, y in zip(counts, line_types, y_values):
         roles = roles_for_line(count, line_type)
-        xs = line_positions(count)
+        xs = line_positions_for_line(count, line_type)
         for role, x in zip(roles, xs):
-            slots.append({"role": role, "x": x, "y": y})
+            slots.append({"id": f"slot-{len(slots)}", "role": role, "x": x, "y": y})
     return slots
 
 
@@ -289,7 +335,8 @@ def slot_roles_for_player(player_role):
     return ["CM", "AM", "ST", "LW", "RW"]
 
 
-def assign_players_to_slots(slots, players):
+def assign_players_to_slots(slots, players, player_overrides=None):
+    overrides = player_overrides or {}
     players_by_role = {}
     for row in players:
         if not row:
@@ -302,6 +349,17 @@ def assign_players_to_slots(slots, players):
         players_by_role.setdefault(role, []).append(name)
 
     assignments = [[] for _ in slots]
+    slot_id_to_index = {slot["id"]: idx for idx, slot in enumerate(slots)}
+
+    for name, slot_id in overrides.items():
+        idx = slot_id_to_index.get(slot_id)
+        if idx is None:
+            continue
+        for role, names in players_by_role.items():
+            if name in names:
+                names.remove(name)
+                break
+        assignments[idx].append(name)
 
     for idx, slot in enumerate(slots):
         for role in candidate_roles_for_slot(slot["role"]):
@@ -664,9 +722,40 @@ def view_disposition():
     leftover_list = tk.Listbox(controls, height=16)
     leftover_list.pack(fill="both", expand=False, pady=(4, 12))
 
+    mode_var = tk.StringVar(value="players")
+    ttk.Label(controls, text="Mode").pack(anchor="w")
+    ttk.Radiobutton(
+        controls,
+        text="Placement joueurs",
+        value="players",
+        variable=mode_var
+    ).pack(anchor="w", pady=(2, 2))
+    ttk.Radiobutton(
+        controls,
+        text="Déplacement postes",
+        value="slots",
+        variable=mode_var
+    ).pack(anchor="w", pady=(0, 12))
+
+    selected_player_var = tk.StringVar(value="Aucun")
+    ttk.Label(controls, text="Joueur sélectionné").pack(anchor="w")
+    ttk.Label(controls, textvariable=selected_player_var, style="Muted.TLabel").pack(anchor="w", pady=(2, 12))
+    clear_selection_button = ttk.Button(controls, text="Effacer sélection")
+    clear_selection_button.pack(fill="x", pady=(0, 12))
+
+    reset_assignments_button = ttk.Button(controls, text="Réinitialiser placements")
+    reset_assignments_button.pack(fill="x", pady=(0, 6))
+
+    reset_positions_button = ttk.Button(controls, text="Réinitialiser postes")
+    reset_positions_button.pack(fill="x", pady=(0, 12))
+
     help_text = ttk.Label(
         controls,
-        text="Chaque poste peut accueillir plusieurs joueurs.",
+        text=(
+            "Sélectionne un joueur puis clique sur un poste pour le placer. "
+            "Tu peux aussi cliquer un poste pour déplacer un joueur déjà assigné. "
+            "En mode déplacement, fais glisser un poste pour ajuster sa position."
+        ),
         style="Muted.TLabel",
         wraplength=220,
         justify="left"
@@ -675,6 +764,82 @@ def view_disposition():
 
     canvas = tk.Canvas(canvas_frame, bg="#2E7D32", highlightthickness=0)
     canvas.pack(fill="both", expand=True)
+
+    player_overrides_by_formation = {}
+    slot_offsets_by_formation = {}
+    slot_positions = {}
+    current_slots = []
+    current_assignments = []
+    drag_state = {"type": None, "player": None, "slot_id": None, "start": (0, 0), "base_offset": (0, 0)}
+    selected_slot_id = {"value": None}
+    player_menu = tk.Menu(disp_win, tearoff=0)
+
+    def clamp(value, min_value=0.05, max_value=0.95):
+        return max(min_value, min(max_value, value))
+
+    def current_overrides():
+        return player_overrides_by_formation.setdefault(formation_var.get(), {})
+
+    def current_offsets():
+        return slot_offsets_by_formation.setdefault(formation_var.get(), {})
+
+    def cleanup_overrides():
+        valid_names = {str(row[0]).strip() for row in effectif if row}
+        overrides = current_overrides()
+        stale = [name for name in overrides.keys() if name not in valid_names]
+        for name in stale:
+            overrides.pop(name, None)
+
+    def get_slot_at(x, y):
+        for slot_id, (sx, sy) in slot_positions.items():
+            if (x - sx) ** 2 + (y - sy) ** 2 <= 24 ** 2:
+                return slot_id
+        return None
+
+    def pick_player_from_slot(slot_id, event=None):
+        slot_index = next((idx for idx, slot in enumerate(current_slots) if slot["id"] == slot_id), None)
+        if slot_index is None:
+            return
+        players = current_assignments[slot_index]
+        if not players:
+            return
+        if len(players) == 1:
+            start_player_drag(players[0], slot_id)
+            return
+        player_menu.delete(0, tk.END)
+        for player_name in players:
+            player_menu.add_command(
+                label=player_name,
+                command=lambda p=player_name: start_player_drag(p, slot_id)
+            )
+        if event is not None:
+            player_menu.post(event.x_root, event.y_root)
+
+    def start_player_drag(player_name, slot_id=None):
+        drag_state.update({"type": "player", "player": player_name, "slot_id": slot_id})
+        selected_player_var.set(player_name)
+
+    def assign_player_to_slot(player_name, slot_id):
+        if not player_name or not slot_id:
+            return
+        overrides = current_overrides()
+        overrides[player_name] = slot_id
+        drag_state.update({"type": None, "player": None, "slot_id": None})
+        update_view()
+
+    def reset_assignments():
+        current_overrides().clear()
+        selected_player_var.set("Aucun")
+        update_view()
+
+    def reset_positions():
+        current_offsets().clear()
+        selected_slot_id["value"] = None
+        update_view()
+
+    def clear_player_selection():
+        selected_player_var.set("Aucun")
+        drag_state.update({"type": None, "player": None, "slot_id": None})
 
     def draw_pitch():
         canvas.delete("pitch")
@@ -741,8 +906,24 @@ def view_disposition():
         width = canvas.winfo_width()
         height = canvas.winfo_height()
         margin = 24
+        cleanup_overrides()
         slots = build_formation_slots(formation_var.get())
-        assignments = assign_players_to_slots(slots, effectif)
+        offsets = current_offsets()
+        slot_positions.clear()
+        valid_slot_ids = {slot["id"] for slot in slots}
+        if selected_slot_id["value"] not in valid_slot_ids:
+            selected_slot_id["value"] = None
+        overrides = current_overrides()
+        for name, slot_id in list(overrides.items()):
+            if slot_id not in valid_slot_ids:
+                overrides.pop(name, None)
+        for slot in slots:
+            dx, dy = offsets.get(slot["id"], (0.0, 0.0))
+            slot["x"] = clamp(slot["x"] + dx)
+            slot["y"] = clamp(slot["y"] + dy, 0.08, 0.92)
+        assignments = assign_players_to_slots(slots, effectif, overrides)
+        current_slots[:] = slots
+        current_assignments[:] = assignments
 
         leftover_list.delete(0, tk.END)
         placed_names = {name for group in assignments for name in group}
@@ -756,10 +937,16 @@ def view_disposition():
         for slot, players in zip(slots, assignments):
             x = margin + slot["x"] * (width - 2 * margin)
             y = margin + slot["y"] * (height - 2 * margin)
+            slot_positions[slot["id"]] = (x, y)
             canvas.create_oval(
                 x - 22, y - 22, x + 22, y + 22,
                 fill="#0B3D2E", outline="white", width=2, tags="player"
             )
+            if selected_slot_id["value"] == slot["id"]:
+                canvas.create_oval(
+                    x - 26, y - 26, x + 26, y + 26,
+                    outline="#F4D35E", width=2, tags="player"
+                )
             label = "\n".join(players) if players else slot["role"]
             canvas.create_text(
                 x, y,
@@ -775,9 +962,78 @@ def view_disposition():
             disp_win.after_cancel(disp_win._update_job)
         disp_win._update_job = disp_win.after(120, update_view)
 
+    def on_leftover_select(event=None):
+        selection = leftover_list.curselection()
+        if not selection:
+            return
+        player_name = leftover_list.get(selection[0])
+        selected_player_var.set(player_name)
+
+    def on_canvas_press(event):
+        slot_id = get_slot_at(event.x, event.y)
+        if mode_var.get() == "slots":
+            if slot_id:
+                selected_slot_id["value"] = slot_id
+                width = canvas.winfo_width()
+                height = canvas.winfo_height()
+                margin = 24
+                offsets = current_offsets()
+                base_offset = offsets.get(slot_id, (0.0, 0.0))
+                drag_state.update({
+                    "type": "slot",
+                    "slot_id": slot_id,
+                    "start": (event.x, event.y),
+                    "base_offset": base_offset,
+                })
+                update_view()
+            else:
+                selected_slot_id["value"] = None
+                update_view()
+            return
+        if mode_var.get() == "players":
+            if slot_id:
+                player_name = selected_player_var.get()
+                if player_name and player_name != "Aucun":
+                    assign_player_to_slot(player_name, slot_id)
+                else:
+                    pick_player_from_slot(slot_id, event)
+
+    def on_canvas_drag(event):
+        if drag_state["type"] != "slot":
+            return
+        slot_id = drag_state["slot_id"]
+        if not slot_id:
+            return
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        margin = 24
+        pitch_w = max(1, width - 2 * margin)
+        pitch_h = max(1, height - 2 * margin)
+        dx = (event.x - drag_state["start"][0]) / pitch_w
+        dy = (event.y - drag_state["start"][1]) / pitch_h
+        base_dx, base_dy = drag_state["base_offset"]
+        offsets = current_offsets()
+        offsets[slot_id] = (base_dx + dx, base_dy + dy)
+        update_view()
+
+    def on_canvas_release(event):
+        if drag_state["type"] == "player":
+            slot_id = get_slot_at(event.x, event.y)
+            if slot_id:
+                assign_player_to_slot(drag_state["player"], slot_id)
+        drag_state.update({"type": None, "player": None, "slot_id": None})
+
+    reset_assignments_button.config(command=reset_assignments)
+    reset_positions_button.config(command=reset_positions)
+    clear_selection_button.config(command=clear_player_selection)
+
     formation_box.bind("<<ComboboxSelected>>", schedule_update)
     refresh_button.config(command=schedule_update)
     canvas.bind("<Configure>", schedule_update)
+    canvas.bind("<ButtonPress-1>", on_canvas_press)
+    canvas.bind("<B1-Motion>", on_canvas_drag)
+    canvas.bind("<ButtonRelease-1>", on_canvas_release)
+    leftover_list.bind("<<ListboxSelect>>", on_leftover_select)
     schedule_update()
 
 # -----------------------------
