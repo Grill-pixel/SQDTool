@@ -769,6 +769,7 @@ def view_edit_composition():
 def view_disposition():
     global disposition_window, disposition_exporter
     if disposition_window is not None and disposition_window.winfo_exists():
+        disposition_window.deiconify()
         disposition_window.lift()
         disposition_window.focus_force()
         return
@@ -1168,6 +1169,9 @@ def view_disposition():
             return image.convert("RGB")
 
     def export_disposition_pdf():
+        disp_win.deiconify()
+        disp_win.lift()
+        disp_win.focus_force()
         schedule_update()
         disp_win.update_idletasks()
         canvas.update()
@@ -1219,8 +1223,12 @@ def view_disposition():
 
 def export_disposition_from_sidebar():
     view_disposition()
-    if disposition_exporter:
-        disposition_exporter()
+    if disposition_exporter and disposition_window is not None:
+        disposition_window.deiconify()
+        disposition_window.lift()
+        disposition_window.focus_force()
+        disposition_window.update_idletasks()
+        disposition_window.after(150, disposition_exporter)
     else:
         messagebox.showwarning(
             "Disposition indisponible",
