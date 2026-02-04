@@ -41,6 +41,7 @@ composition_file = legacy_composition if os.path.exists(legacy_composition) else
 settings_file = os.path.join(os.path.dirname(__file__), "settings.json")
 edit_window = None
 disposition_window = None
+disposition_export_callback = None
 
 default_settings = {
     "club_name": "Olympique de Marseille",
@@ -58,7 +59,15 @@ if os.path.exists(settings_file):
     except Exception as e:
         logging.error(f"Erreur chargement settings : {e}")
 
-headers = ['Joueur', 'Poste', 'Âge', 'Nationalité', 'Statut', 'Option d’achat']
+headers = [
+    'Joueur',
+    'Poste',
+    'Âge',
+    'Nationalité',
+    'Type de contrat',
+    'Type de clause',
+    'Fin de contrat'
+]
 
 # -----------------------------
 # Effectif par défaut
@@ -111,6 +120,8 @@ def normalize_effectif(data):
     def build_row(entry):
         if isinstance(entry, (list, tuple)):
             row = [str(value) for value in entry]
+            if len(row) == 6:
+                row.append("")
             if len(row) < len(headers):
                 row += [""] * (len(headers) - len(row))
             return row[:len(headers)]
@@ -119,9 +130,18 @@ def normalize_effectif(data):
             poste = entry.get("poste_principal") or entry.get("poste") or ""
             age = entry.get("age", "")
             nationalite = entry.get("nationalite") or entry.get("nationalité") or ""
-            statut = entry.get("statut") or ""
-            option = entry.get("option_achat") or entry.get("option d’achat") or entry.get("option") or ""
-            return [str(joueur), str(poste), str(age), str(nationalite), str(statut), str(option)]
+            type_contrat = entry.get("type_contrat") or entry.get("statut") or ""
+            type_clause = entry.get("type_clause") or entry.get("option_achat") or entry.get("option d’achat") or entry.get("option") or ""
+            fin_contrat = entry.get("fin_contrat") or entry.get("fin") or ""
+            return [
+                str(joueur),
+                str(poste),
+                str(age),
+                str(nationalite),
+                str(type_contrat),
+                str(type_clause),
+                str(fin_contrat)
+            ]
         return None
 
     if isinstance(data, list):
@@ -148,11 +168,14 @@ def normalize_effectif(data):
                     if key == "prets_sortants":
                         club = entry.get("club_pret") or ""
                         fin = entry.get("fin_pret") or ""
-                        row[3] = row[3] or ""
-                        row[4] = row[4] or f"Prêt sortant : {club} ({fin})".strip()
+                        row[4] = row[4] or f"Prêt sortant : {club}".strip()
+                        row[6] = row[6] or fin
                     rows.append(row)
         return rows
     return []
+
+
+effectif = normalize_effectif(effectif)
 
 
 def load_effectif_from_file(path):
@@ -494,7 +517,7 @@ def add_table(pdf, title, headers, data):
         pdf.set_xy(pdf.l_margin, start_y + row_height)
     pdf.ln(5)
 
-def generate_pdf_file():
+def generate_composition_pdf():
     try:
         logging.debug("Début génération PDF")
         pdf = PDF('L', 'mm', 'A4')
@@ -676,7 +699,7 @@ def view_edit_composition():
 
 
 def view_disposition():
-    global disposition_window
+    global disposition_window, disposition_export_callback
     if disposition_window is not None and disposition_window.winfo_exists():
         disposition_window.lift()
         disposition_window.focus_force()
@@ -689,10 +712,11 @@ def view_disposition():
     disp_win.minsize(960, 680)
 
     def handle_close():
-        global disposition_window
+        global disposition_window, disposition_export_callback
         if disposition_window is not None:
             disposition_window.destroy()
         disposition_window = None
+        disposition_export_callback = None
 
     disp_win.protocol("WM_DELETE_WINDOW", handle_close)
 
@@ -1072,6 +1096,7 @@ def view_disposition():
     reset_positions_button.config(command=reset_positions)
     clear_selection_button.config(command=clear_player_selection)
     ttk.Button(controls, text="Exporter en PDF", command=export_disposition_pdf).pack(fill="x", pady=(12, 0))
+    disposition_export_callback = export_disposition_pdf
 
     formation_box.bind("<<ComboboxSelected>>", schedule_update)
     refresh_button.config(command=schedule_update)
@@ -1081,6 +1106,12 @@ def view_disposition():
     canvas.bind("<ButtonRelease-1>", on_canvas_release)
     leftover_list.bind("<<ListboxSelect>>", on_leftover_select)
     schedule_update()
+
+
+def export_disposition_from_main():
+    view_disposition()
+    if disposition_export_callback is not None:
+        root.after(200, disposition_export_callback)
 
 # -----------------------------
 # Interface principale
@@ -1305,11 +1336,12 @@ actions.pack(fill="x")
 actions.columnconfigure(0, weight=1)
 actions.columnconfigure(1, weight=1)
 
-ttk.Button(actions, text="Générer le PDF", command=generate_pdf_file).grid(row=0, column=0, sticky="ew", padx=(0, 8), pady=6)
+ttk.Button(actions, text="Imprimer la composition (PDF)", command=generate_composition_pdf).grid(row=0, column=0, sticky="ew", padx=(0, 8), pady=6)
 ttk.Button(actions, text="Sélectionner un dossier", command=lambda: select_folder()).grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=6)
 ttk.Button(actions, text="Nommer le PDF", command=lambda: set_filename()).grid(row=1, column=0, sticky="ew", padx=(0, 8), pady=6)
 ttk.Button(actions, text="Éditer la composition", command=view_edit_composition).grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=6)
 ttk.Button(actions, text="Disposition", command=view_disposition).grid(row=2, column=0, sticky="ew", padx=(0, 8), pady=6)
+ttk.Button(actions, text="Exporter la disposition (PDF)", command=export_disposition_from_main).grid(row=2, column=1, sticky="ew", padx=(8, 0), pady=6)
 
 status_card = ttk.Frame(main, style="Card.TFrame", padding=16)
 status_card.pack(fill="x", pady=(0, 16))
