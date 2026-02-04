@@ -2,6 +2,8 @@
 
 SQDTool est une application de bureau (Tkinter) qui permet de gérer un effectif, de modifier facilement les données, puis de générer un PDF propre et structuré. L’interface est organisée en cartes modernes et propose un **sélecteur de thèmes** avec plusieurs palettes de couleurs.
 
+Langues : [English](README.en.md) | [العربية](README.ar.md) | [Licence](LICENSE)
+
 ## Points clés
 
 - **Nom du club et saison éditables** (plus de texte figé).

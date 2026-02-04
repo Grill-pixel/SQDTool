@@ -33,6 +33,7 @@ default_composition = os.path.join(os.path.dirname(__file__), "composition.json"
 legacy_composition = os.path.join(os.path.dirname(__file__), "effectifOM.json")
 composition_file = legacy_composition if os.path.exists(legacy_composition) else default_composition
 settings_file = os.path.join(os.path.dirname(__file__), "settings.json")
+edit_window = None
 
 default_settings = {
     "club_name": "Olympique de Marseille",
@@ -274,10 +275,24 @@ def generate_pdf_file():
 # Édition interactive type Excel
 # -----------------------------
 def view_edit_composition():
+    global edit_window
+    if edit_window is not None and edit_window.winfo_exists():
+        edit_window.lift()
+        edit_window.focus_force()
+        return
     edit_win = tk.Toplevel(root)
+    edit_window = edit_win
     edit_win.title("Édition de la composition")
     edit_win.geometry("1200x700")
     edit_win.minsize(1000, 600)
+
+    def handle_close():
+        global edit_window
+        if edit_window is not None:
+            edit_window.destroy()
+        edit_window = None
+
+    edit_win.protocol("WM_DELETE_WINDOW", handle_close)
 
     container = ttk.Frame(edit_win, padding=12)
     container.pack(fill="both", expand=True)
