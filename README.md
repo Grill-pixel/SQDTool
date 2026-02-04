@@ -1,21 +1,51 @@
-# SQDTool – Tableau de gestion d’effectif
+# SQDTool — Tableau moderne de gestion d’effectif
 
-SQDTool est une application de bureau (Tkinter) qui permet de gérer un effectif, de modifier facilement les données, puis de générer un PDF propre et structuré. L’interface est organisée en cartes modernes et propose un **sélecteur de thèmes** avec plusieurs palettes de couleurs.
+![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)
+![UI](https://img.shields.io/badge/UI-Tkinter-0F172A)
+![Licence](https://img.shields.io/badge/Licence-MIT-10B981)
 
-Langues : [English](README.en.md) | [العربية](README.ar.md) | [Licence](LICENSE)
+**SQDTool** est une application de bureau (Tkinter) pour piloter un effectif, organiser une disposition tactique et générer des PDF propres, prêts à être partagés. Elle combine un éditeur de roster flexible, une vue terrain interactive et un système de thèmes pour moderniser l’interface.
 
-## Points clés
+**Langues :** [English](README.en.md) · [العربية](README.ar.md) · [Licence](LICENSE)
 
-- **Nom du club et saison éditables** (plus de texte figé).
-- **Édition complète de l’effectif** (ajout, modification, suppression).
-- **Export PDF** par postes.
-- **Interface modernisée** avec 12 thèmes.
-- **Paramètres sauvegardés automatiquement**.
+---
 
-## Prérequis
+## Sommaire
 
-- Python 3.9+
-- Accès internet (uniquement pour l’installation auto de `fpdf2` au premier lancement)
+- [Fonctionnalités](#fonctionnalités)
+- [Aperçu rapide](#aperçu-rapide)
+- [Installation](#installation)
+- [Utilisation](#utilisation)
+  - [Paramètres du club](#paramètres-du-club)
+  - [Éditeur d’effectif](#éditeur-deffectif)
+  - [Disposition (terrain)](#disposition-terrain)
+  - [Exports PDF](#exports-pdf)
+- [Fichiers et persistance](#fichiers-et-persistance)
+- [Personnalisation](#personnalisation)
+- [Dépannage](#dépannage)
+- [Licence](#licence)
+
+---
+
+## Fonctionnalités
+
+- **Gestion complète de l’effectif** : ajout, édition, suppression en un clic.
+- **Disposition tactique interactive** : placement des joueurs et repositionnement manuel des postes.
+- **PDF “Effectif”** : export structuré par postes.
+- **PDF “Disposition”** : export fidèle de la vue terrain (copie conforme de l’écran).
+- **Thèmes modernes** : 12 palettes intégrées, sauvegarde automatique.
+- **Paramètres persistants** : nom du club, saison, thème.
+
+---
+
+## Aperçu rapide
+
+1. Lancez l’application : `python marseille.pyw`.
+2. Modifiez votre effectif dans **Éditer la composition**.
+3. Organisez votre équipe via **Disposition**.
+4. Exportez des PDF : effectif et disposition.
+
+---
 
 ## Installation
 
@@ -25,46 +55,58 @@ cd SQDTool
 python marseille.pyw
 ```
 
-> Lors du premier lancement, l’application installe `fpdf2` si nécessaire.
+> Au premier lancement, **fpdf2** est installé automatiquement si nécessaire. L’export de la disposition installe **Pillow** si besoin.
 
-## Fonctionnalités principales
+---
 
-### 1) Paramètres du club
-Dans la carte **« Paramètres du club »**, vous pouvez définir :
+## Utilisation
+
+### Paramètres du club
+Dans **Paramètres du club**, vous pouvez éditer :
 
 - **Nom du club**
 - **Saison**
 - **Thème**
 
-Cliquez sur **Appliquer** pour enregistrer et mettre à jour le titre, le panneau de statut et l’en‑tête du PDF.
+Cliquez sur **Appliquer** pour mettre à jour l’interface et les exports.
 
-### 2) Sélecteur de thèmes
-Le menu déroulant propose 12 palettes (ex. « Azur & Or », « Océan Profond », « Lavande Moderne »). Le thème s’applique immédiatement et est mémorisé.
+### Éditeur d’effectif
+Ouvrez **Éditer la composition** pour :
 
-### 3) Éditeur d’effectif
-Cliquez sur **« Éditer la composition »** :
+- Ajouter un joueur (nom, poste, âge, nationalité, statut, option d’achat).
+- Modifier une ligne existante.
+- Supprimer une sélection.
+- Sauvegarder la composition au format JSON.
 
-- Ajoutez, modifiez ou supprimez des joueurs.
-- Les données sont sauvegardées dans `composition.json`.
-- L’éditeur fonctionne comme un mini tableur.
+### Disposition (terrain)
+La vue **Disposition** permet de construire un schéma tactique sur demi-terrain :
 
-### 4) Export PDF
-Cliquez sur **« Générer le PDF »** :
+- **Mode Placement joueurs** : sélectionnez un joueur puis cliquez un poste pour l’assigner.
+- **Mode Déplacement postes** : faites glisser les postes pour ajuster la structure.
+- **Rafraîchir l’effectif** : recharge la liste des joueurs si elle a changé.
+- **Réinitialiser** : remise à zéro des placements ou des positions.
 
-- Regroupement automatique par poste.
-- Utilisation du nom du club et de la saison actuels.
-- Le PDF est enregistré dans le dossier sélectionné (par défaut `PDFs/`).
+### Exports PDF
+
+- **PDF Effectif** : bouton **Générer le PDF** (regroupé par poste).
+- **PDF Disposition** : bouton **Exporter en PDF** dans la fenêtre disposition.
+
+Le PDF de disposition est une **copie conforme** de la vue terrain et conserve la mise en page actuelle (postes, joueurs, positions).
+
+---
 
 ## Fichiers et persistance
 
-- `composition.json` : données de l’effectif.
+- `composition.json` (ou `effectifOM.json`) : données d’effectif.
 - `settings.json` : nom du club, saison, thème.
-- `om_program_logs.txt` : journaux de debug.
-- `PDFs/` : dossier des exports.
+- `om_program_logs.txt` : logs d’exécution.
+- `PDFs/` : exports PDF.
+
+---
 
 ## Personnalisation
 
-Pour ajouter un thème, modifiez le dictionnaire `themes` dans `marseille.pyw` :
+Vous pouvez ajouter un thème dans `marseille.pyw` via le dictionnaire `themes` :
 
 ```python
 "Mon Thème": {
@@ -79,12 +121,16 @@ Pour ajouter un thème, modifiez le dictionnaire `themes` dans `marseille.pyw` :
 }
 ```
 
+---
+
 ## Dépannage
 
-- **Installation FPDF** : lancez `pip install fpdf2` manuellement si besoin.
-- **PDF introuvable** : vérifiez le dossier de sortie et les permissions.
-- **Polices sur macOS/Linux** : ajustez les chemins de polices dans `generate_pdf_file()`.
+- **Erreur d’export PDF** : assurez-vous d’avoir une connexion pour l’installation initiale de `fpdf2` et `pillow`.
+- **PDF introuvable** : vérifiez le dossier choisi lors de l’export.
+- **Texte tronqué dans la disposition** : élargissez la fenêtre avant d’exporter.
+
+---
 
 ## Licence
 
-Ce projet est sous licence MIT. Voir `LICENSE` pour plus d’informations.
+Ce projet est sous licence MIT. Voir `LICENSE`.
