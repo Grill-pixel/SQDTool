@@ -34,6 +34,7 @@ legacy_composition = os.path.join(os.path.dirname(__file__), "effectifOM.json")
 composition_file = legacy_composition if os.path.exists(legacy_composition) else default_composition
 settings_file = os.path.join(os.path.dirname(__file__), "settings.json")
 edit_window = None
+disposition_window = None
 
 default_settings = {
     "club_name": "Olympique de Marseille",
@@ -87,6 +88,18 @@ effectif = [
     ['Angel Gomes', 'MO', '25', 'Wolverhampton', '30/06/2026', 'OA ~6M€'],
     ['Matt O’Riley', 'MC', '23', 'Brighton', 'Prêt terminé', '—']
 ]
+
+formations = {
+    "4-4-2": [4, 4, 2],
+    "4-3-3": [4, 3, 3],
+    "4-2-3-1": [4, 2, 3, 1],
+    "4-1-4-1": [4, 1, 4, 1],
+    "3-5-1": [3, 5, 1],
+    "3-5-2": [3, 5, 2],
+    "3-4-3": [3, 4, 3],
+    "5-3-2": [5, 3, 2],
+    "5-4-1": [5, 4, 1]
+}
 
 def normalize_effectif(data):
     def build_row(entry):
@@ -143,6 +156,176 @@ def load_effectif_from_file(path):
     if not normalized:
         raise ValueError("Composition vide ou format non reconnu.")
     return normalized
+
+
+def map_poste_to_role(poste):
+    poste_lower = poste.lower()
+    if "gardien" in poste_lower:
+        return "GK"
+    if "dc" in poste_lower:
+        return "CB"
+    if "dg" in poste_lower:
+        return "LB"
+    if "dl" in poste_lower:
+        return "RB"
+    if "mdf" in poste_lower:
+        return "DM"
+    if "mc" in poste_lower:
+        return "CM"
+    if "mo" in poste_lower:
+        return "AM"
+    if "ailier" in poste_lower:
+        return "W"
+    if "ac" in poste_lower:
+        return "ST"
+    return "OTHER"
+
+
+def line_positions(count, padding=0.1):
+    if count <= 1:
+        return [0.5]
+    step = (1 - 2 * padding) / (count - 1)
+    return [padding + step * idx for idx in range(count)]
+
+
+def roles_for_line(count, line_type):
+    if line_type == "def":
+        if count == 5:
+            return ["LB", "CB", "CB", "CB", "RB"]
+        if count == 4:
+            return ["LB", "CB", "CB", "RB"]
+        if count == 3:
+            return ["CB", "CB", "CB"]
+        return ["CB"] * count
+    if line_type == "mid":
+        if count == 5:
+            return ["LM", "CM", "CM", "CM", "RM"]
+        if count == 4:
+            return ["LM", "CM", "CM", "RM"]
+        if count == 3:
+            return ["CM", "CM", "CM"]
+        return ["CM"] * count
+    if line_type == "dm":
+        return ["DM"] * count
+    if line_type == "am":
+        if count == 3:
+            return ["LW", "AM", "RW"]
+        if count == 2:
+            return ["AM", "AM"]
+        return ["AM"] * count
+    if line_type == "att":
+        if count == 3:
+            return ["LW", "ST", "RW"]
+        if count == 2:
+            return ["ST", "ST"]
+        return ["ST"] * count
+    return ["CM"] * count
+
+
+def build_formation_slots(formation_key):
+    counts = formations.get(formation_key, [4, 4, 2])
+    slots = [{"role": "GK", "x": 0.5, "y": 0.1}]
+    if len(counts) == 3:
+        line_types = ["def", "mid", "att"]
+        y_values = [0.28, 0.55, 0.82]
+    elif len(counts) == 4:
+        line_types = ["def", "dm", "am", "att"]
+        y_values = [0.26, 0.45, 0.65, 0.84]
+    else:
+        line_types = ["def", "mid", "att"]
+        y_values = [0.28, 0.55, 0.82]
+
+    for count, line_type, y in zip(counts, line_types, y_values):
+        roles = roles_for_line(count, line_type)
+        xs = line_positions(count)
+        for role, x in zip(roles, xs):
+            slots.append({"role": role, "x": x, "y": y})
+    return slots
+
+
+def candidate_roles_for_slot(slot_role):
+    if slot_role == "GK":
+        return ["GK"]
+    if slot_role == "CB":
+        return ["CB"]
+    if slot_role == "LB":
+        return ["LB", "CB"]
+    if slot_role == "RB":
+        return ["RB", "CB"]
+    if slot_role in {"LM", "RM"}:
+        return ["W", "CM", "AM"]
+    if slot_role == "CM":
+        return ["CM", "DM", "AM"]
+    if slot_role == "DM":
+        return ["DM", "CM"]
+    if slot_role == "AM":
+        return ["AM", "CM", "W"]
+    if slot_role in {"LW", "RW"}:
+        return ["W", "ST", "AM"]
+    if slot_role == "ST":
+        return ["ST", "W"]
+    return ["CM", "AM", "W", "ST"]
+
+
+def slot_roles_for_player(player_role):
+    if player_role == "GK":
+        return ["GK"]
+    if player_role == "CB":
+        return ["CB", "LB", "RB"]
+    if player_role == "LB":
+        return ["LB", "CB"]
+    if player_role == "RB":
+        return ["RB", "CB"]
+    if player_role == "DM":
+        return ["DM", "CM"]
+    if player_role == "CM":
+        return ["CM", "DM", "AM"]
+    if player_role == "AM":
+        return ["AM", "CM", "LW", "RW"]
+    if player_role == "W":
+        return ["LW", "RW", "LM", "RM", "ST", "AM"]
+    if player_role == "ST":
+        return ["ST", "LW", "RW"]
+    return ["CM", "AM", "ST", "LW", "RW"]
+
+
+def assign_players_to_slots(slots, players):
+    players_by_role = {}
+    for row in players:
+        if not row:
+            continue
+        name = str(row[0]).strip()
+        poste = str(row[1]).strip() if len(row) > 1 else ""
+        if not name:
+            continue
+        role = map_poste_to_role(poste)
+        players_by_role.setdefault(role, []).append(name)
+
+    assignments = [[] for _ in slots]
+
+    for idx, slot in enumerate(slots):
+        for role in candidate_roles_for_slot(slot["role"]):
+            if players_by_role.get(role):
+                assignments[idx].append(players_by_role[role].pop(0))
+                break
+
+    leftovers = []
+    for role, names in players_by_role.items():
+        for name in names:
+            leftovers.append((role, name))
+
+    for role, name in leftovers:
+        compatible = slot_roles_for_player(role)
+        candidate_indices = [
+            idx for idx, slot in enumerate(slots)
+            if slot["role"] in compatible
+        ]
+        if not candidate_indices:
+            continue
+        best_index = min(candidate_indices, key=lambda idx: len(assignments[idx]))
+        assignments[best_index].append(name)
+
+    return assignments
 
 
 # Charger composition sauvegardée si existante
@@ -427,6 +610,176 @@ def view_edit_composition():
     ttk.Button(footer, text="Charger un fichier", command=load_composition).pack(side="left")
     ttk.Button(footer, text="Sauvegarder sous...", command=save_changes).pack(side="right")
 
+
+def view_disposition():
+    global disposition_window
+    if disposition_window is not None and disposition_window.winfo_exists():
+        disposition_window.lift()
+        disposition_window.focus_force()
+        return
+
+    disp_win = tk.Toplevel(root)
+    disposition_window = disp_win
+    disp_win.title("Disposition")
+    disp_win.geometry("1100x760")
+    disp_win.minsize(960, 680)
+
+    def handle_close():
+        global disposition_window
+        if disposition_window is not None:
+            disposition_window.destroy()
+        disposition_window = None
+
+    disp_win.protocol("WM_DELETE_WINDOW", handle_close)
+
+    container = ttk.Frame(disp_win, padding=16)
+    container.pack(fill="both", expand=True)
+
+    title = ttk.Label(container, text="Disposition sur demi-terrain", style="Header.TLabel")
+    title.pack(anchor="w", pady=(0, 12))
+
+    content = ttk.Frame(container)
+    content.pack(fill="both", expand=True)
+
+    canvas_frame = ttk.Frame(content)
+    canvas_frame.pack(side="left", fill="both", expand=True)
+
+    controls = ttk.Frame(content, padding=(16, 0, 0, 0))
+    controls.pack(side="right", fill="y")
+
+    formation_var = tk.StringVar(value="4-4-2")
+    ttk.Label(controls, text="Disposition").pack(anchor="w")
+    formation_box = ttk.Combobox(
+        controls,
+        textvariable=formation_var,
+        values=sorted(formations.keys()),
+        state="readonly"
+    )
+    formation_box.pack(fill="x", pady=(4, 12))
+
+    refresh_button = ttk.Button(controls, text="Rafraîchir l'effectif")
+    refresh_button.pack(fill="x", pady=(0, 12))
+
+    ttk.Label(controls, text="Joueurs non placés").pack(anchor="w")
+    leftover_list = tk.Listbox(controls, height=16)
+    leftover_list.pack(fill="both", expand=False, pady=(4, 12))
+
+    help_text = ttk.Label(
+        controls,
+        text="Chaque poste peut accueillir plusieurs joueurs.",
+        style="Muted.TLabel",
+        wraplength=220,
+        justify="left"
+    )
+    help_text.pack(anchor="w")
+
+    canvas = tk.Canvas(canvas_frame, bg="#2E7D32", highlightthickness=0)
+    canvas.pack(fill="both", expand=True)
+
+    def draw_pitch():
+        canvas.delete("pitch")
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        margin = 24
+        pitch_left = margin
+        pitch_top = margin
+        pitch_right = width - margin
+        pitch_bottom = height - margin
+
+        canvas.create_rectangle(
+            pitch_left, pitch_top, pitch_right, pitch_bottom,
+            outline="white", width=3, tags="pitch"
+        )
+        canvas.create_line(
+            pitch_left, pitch_bottom, pitch_right, pitch_bottom,
+            fill="white", width=2, tags="pitch"
+        )
+
+        penalty_width = (pitch_right - pitch_left) * 0.55
+        penalty_height = (pitch_bottom - pitch_top) * 0.22
+        penalty_left = (width - penalty_width) / 2
+        penalty_top = pitch_top
+        canvas.create_rectangle(
+            penalty_left, penalty_top,
+            penalty_left + penalty_width, penalty_top + penalty_height,
+            outline="white", width=2, tags="pitch"
+        )
+
+        goal_width = penalty_width * 0.55
+        goal_height = penalty_height * 0.45
+        goal_left = (width - goal_width) / 2
+        canvas.create_rectangle(
+            goal_left, penalty_top,
+            goal_left + goal_width, penalty_top + goal_height,
+            outline="white", width=2, tags="pitch"
+        )
+
+        spot_y = penalty_top + penalty_height * 0.72
+        canvas.create_oval(
+            width / 2 - 4, spot_y - 4,
+            width / 2 + 4, spot_y + 4,
+            fill="white", outline="white", tags="pitch"
+        )
+
+        arc_radius = (pitch_right - pitch_left) * 0.18
+        canvas.create_arc(
+            width / 2 - arc_radius,
+            pitch_bottom - arc_radius,
+            width / 2 + arc_radius,
+            pitch_bottom + arc_radius,
+            start=0,
+            extent=180,
+            style="arc",
+            outline="white",
+            width=2,
+            tags="pitch"
+        )
+
+    def update_view():
+        canvas.delete("player")
+        draw_pitch()
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        margin = 24
+        slots = build_formation_slots(formation_var.get())
+        assignments = assign_players_to_slots(slots, effectif)
+
+        leftover_list.delete(0, tk.END)
+        placed_names = {name for group in assignments for name in group}
+        for row in effectif:
+            if not row:
+                continue
+            name = str(row[0]).strip()
+            if name and name not in placed_names:
+                leftover_list.insert(tk.END, name)
+
+        for slot, players in zip(slots, assignments):
+            x = margin + slot["x"] * (width - 2 * margin)
+            y = margin + slot["y"] * (height - 2 * margin)
+            canvas.create_oval(
+                x - 22, y - 22, x + 22, y + 22,
+                fill="#0B3D2E", outline="white", width=2, tags="player"
+            )
+            label = "\n".join(players) if players else slot["role"]
+            canvas.create_text(
+                x, y,
+                text=label,
+                fill="white",
+                font=("Segoe UI", 8, "bold"),
+                width=130,
+                tags="player"
+            )
+
+    def schedule_update(event=None):
+        if hasattr(disp_win, "_update_job"):
+            disp_win.after_cancel(disp_win._update_job)
+        disp_win._update_job = disp_win.after(120, update_view)
+
+    formation_box.bind("<<ComboboxSelected>>", schedule_update)
+    refresh_button.config(command=schedule_update)
+    canvas.bind("<Configure>", schedule_update)
+    schedule_update()
+
 # -----------------------------
 # Interface principale
 # -----------------------------
@@ -654,6 +1007,7 @@ ttk.Button(actions, text="Générer le PDF", command=generate_pdf_file).grid(row
 ttk.Button(actions, text="Sélectionner un dossier", command=lambda: select_folder()).grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=6)
 ttk.Button(actions, text="Nommer le PDF", command=lambda: set_filename()).grid(row=1, column=0, sticky="ew", padx=(0, 8), pady=6)
 ttk.Button(actions, text="Éditer la composition", command=view_edit_composition).grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=6)
+ttk.Button(actions, text="Disposition", command=view_disposition).grid(row=2, column=0, sticky="ew", padx=(0, 8), pady=6)
 
 status_card = ttk.Frame(main, style="Card.TFrame", padding=16)
 status_card.pack(fill="x", pady=(0, 16))
