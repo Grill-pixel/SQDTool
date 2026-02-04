@@ -29,7 +29,9 @@ logging.debug("Programme démarré")
 pdf_folder = os.path.join(os.path.dirname(__file__), "PDFs")
 os.makedirs(pdf_folder, exist_ok=True)
 pdf_filename = "OM_Effectif_Pretes_2025_2026.pdf"
-composition_file = os.path.join(os.path.dirname(__file__), "composition.json")
+default_composition = os.path.join(os.path.dirname(__file__), "composition.json")
+legacy_composition = os.path.join(os.path.dirname(__file__), "effectifOM.json")
+composition_file = legacy_composition if os.path.exists(legacy_composition) else default_composition
 settings_file = os.path.join(os.path.dirname(__file__), "settings.json")
 
 default_settings = {
@@ -85,11 +87,67 @@ effectif = [
     ['Matt O’Riley', 'MC', '23', 'Brighton', 'Prêt terminé', '—']
 ]
 
+def normalize_effectif(data):
+    def build_row(entry):
+        if isinstance(entry, (list, tuple)):
+            row = [str(value) for value in entry]
+            if len(row) < len(headers):
+                row += [""] * (len(headers) - len(row))
+            return row[:len(headers)]
+        if isinstance(entry, dict):
+            joueur = entry.get("joueur") or entry.get("name") or entry.get("nom") or ""
+            poste = entry.get("poste_principal") or entry.get("poste") or ""
+            age = entry.get("age", "")
+            nationalite = entry.get("nationalite") or entry.get("nationalité") or ""
+            statut = entry.get("statut") or ""
+            option = entry.get("option_achat") or entry.get("option d’achat") or entry.get("option") or ""
+            return [str(joueur), str(poste), str(age), str(nationalite), str(statut), str(option)]
+        return None
+
+    if isinstance(data, list):
+        rows = []
+        for entry in data:
+            row = build_row(entry)
+            if row:
+                rows.append(row)
+        return rows
+
+    if isinstance(data, dict):
+        rows = []
+        for key, entries in data.items():
+            if not isinstance(entries, list):
+                continue
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    row = build_row(entry)
+                    if row:
+                        rows.append(row)
+                    continue
+                row = build_row(entry)
+                if row:
+                    if key == "prets_sortants":
+                        club = entry.get("club_pret") or ""
+                        fin = entry.get("fin_pret") or ""
+                        row[3] = row[3] or ""
+                        row[4] = row[4] or f"Prêt sortant : {club} ({fin})".strip()
+                    rows.append(row)
+        return rows
+    return []
+
+
+def load_effectif_from_file(path):
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    normalized = normalize_effectif(data)
+    if not normalized:
+        raise ValueError("Composition vide ou format non reconnu.")
+    return normalized
+
+
 # Charger composition sauvegardée si existante
 if os.path.exists(composition_file):
     try:
-        with open(composition_file, "r", encoding="utf-8") as f:
-            effectif = json.load(f)
+        effectif = load_effectif_from_file(composition_file)
         logging.debug("Composition chargée depuis fichier JSON")
     except Exception as e:
         logging.error(f"Erreur chargement composition : {e}")
@@ -307,8 +365,7 @@ def view_edit_composition():
         if not load_path:
             return
         try:
-            with open(load_path, "r", encoding="utf-8") as f:
-                effectif = json.load(f)
+            effectif = load_effectif_from_file(load_path)
             composition_file = load_path
             for item in tree.get_children():
                 tree.delete(item)
