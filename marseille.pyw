@@ -5,6 +5,7 @@ import json
 import subprocess
 import re
 import tempfile
+import time
 import importlib.util
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk, simpledialog
@@ -1147,6 +1148,7 @@ def view_disposition():
         ensure_pillow_available()
         if not PIL_AVAILABLE:
             raise RuntimeError("Pillow n'est pas disponible pour l'export PDF.")
+        wait_for_canvas_ready()
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
                 ps_path = os.path.join(temp_dir, "disposition.ps")
@@ -1168,13 +1170,29 @@ def view_disposition():
             image = ImageGrab.grab(bbox=(x, y, x + width, y + height))
             return image.convert("RGB")
 
-    def export_disposition_pdf():
+    def focus_disposition_window():
         disp_win.deiconify()
         disp_win.lift()
         disp_win.focus_force()
-        schedule_update()
+        disp_win.attributes("-topmost", True)
         disp_win.update_idletasks()
-        canvas.update()
+        disp_win.update()
+        disp_win.attributes("-topmost", False)
+
+    def wait_for_canvas_ready():
+        for _ in range(6):
+            disp_win.update_idletasks()
+            disp_win.update()
+            if canvas.winfo_viewable() and canvas.winfo_width() > 1 and canvas.winfo_height() > 1:
+                return
+            time.sleep(0.05)
+        if canvas.winfo_width() <= 1 or canvas.winfo_height() <= 1:
+            raise RuntimeError("Surface de canvas invalide pour l'export PDF.")
+
+    def export_disposition_pdf():
+        focus_disposition_window()
+        schedule_update()
+        wait_for_canvas_ready()
 
         filename = filedialog.asksaveasfilename(
             title="Enregistrer la disposition en PDF",
