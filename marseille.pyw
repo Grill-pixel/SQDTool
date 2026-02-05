@@ -8,7 +8,7 @@ import tempfile
 import time
 import importlib.util
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk, simpledialog
+from tkinter import filedialog, messagebox, ttk
 
 # -----------------------------
 # Vérification des bibliothèques
@@ -618,9 +618,19 @@ def resolve_font_paths():
 
 
 def generate_composition_pdf():
-    global PDF_FONT_FAMILY
+    global PDF_FONT_FAMILY, pdf_folder, pdf_filename
     try:
         logging.debug("Début génération PDF composition")
+        pdf_path = filedialog.asksaveasfilename(
+            parent=root,
+            title="Enregistrer la composition en PDF",
+            initialdir=pdf_folder,
+            defaultextension=".pdf",
+            filetypes=[("PDF", "*.pdf")],
+            initialfile=pdf_filename
+        )
+        if not pdf_path:
+            return
         pdf = PDF('L', 'mm', 'A4')
         font_paths = resolve_font_paths()
         if font_paths["regular"]:
@@ -646,7 +656,9 @@ def generate_composition_pdf():
         data = build_composition_rows()
         add_table(pdf, "Composition de l'équipe", composition_headers, data)
 
-        pdf_path = os.path.join(pdf_folder, pdf_filename)
+        pdf_folder = os.path.dirname(pdf_path) or pdf_folder
+        pdf_filename = os.path.basename(pdf_path) or pdf_filename
+        refresh_status()
         pdf.output(pdf_path)
         logging.debug(f"PDF composition généré : {pdf_path}")
         messagebox.showinfo("Succès", f"PDF composition généré :\n{pdf_path}")
@@ -1764,8 +1776,6 @@ sidebar_exports.pack(fill="x", pady=(0, 12))
 ttk.Label(sidebar_exports, text="Exports rapides", style="SidebarMuted.TLabel").pack(anchor="w", pady=(0, 6))
 ttk.Button(sidebar_exports, text="PDF composition", command=generate_composition_pdf, style="Sidebar.TButton").pack(fill="x", pady=4)
 ttk.Button(sidebar_exports, text="PDF disposition", command=export_disposition_from_sidebar, style="Sidebar.TButton").pack(fill="x", pady=4)
-ttk.Button(sidebar_exports, text="Dossier PDF", command=lambda: select_folder(), style="Sidebar.TButton").pack(fill="x", pady=4)
-ttk.Button(sidebar_exports, text="Nom du PDF", command=lambda: set_filename(), style="Sidebar.TButton").pack(fill="x", pady=4)
 
 ttk.Separator(sidebar).pack(fill="x", pady=12)
 
@@ -1845,20 +1855,14 @@ actions.columnconfigure(1, weight=1)
 
 ttk.Button(actions, text="Imprimer la composition", command=generate_composition_pdf, style="Primary.TButton").grid(row=0, column=0, sticky="ew", padx=(0, 8), pady=6)
 ttk.Button(actions, text="Exporter la disposition", command=export_disposition_from_sidebar, style="Secondary.TButton").grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=6)
-ttk.Button(actions, text="Sélectionner un dossier", command=lambda: select_folder(), style="Secondary.TButton").grid(row=1, column=0, sticky="ew", padx=(0, 8), pady=6)
-ttk.Button(actions, text="Nommer le PDF", command=lambda: set_filename()).grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=6)
-ttk.Button(actions, text="Éditer la composition", command=view_edit_composition).grid(row=2, column=0, sticky="ew", padx=(0, 8), pady=6)
-ttk.Button(actions, text="Disposition", command=view_disposition).grid(row=2, column=1, sticky="ew", padx=(8, 0), pady=6)
+ttk.Button(actions, text="Éditer la composition", command=view_edit_composition).grid(row=1, column=0, sticky="ew", padx=(0, 8), pady=6)
+ttk.Button(actions, text="Disposition", command=view_disposition).grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=6)
 
 status_tab.columnconfigure(0, weight=1)
 status_card = ttk.Frame(status_tab, style="Card.TFrame", padding=16)
 status_card.grid(row=0, column=0, sticky="ew")
 ttk.Label(status_card, text="Paramètres actuels", style="CardTitle.TLabel").pack(anchor="w", pady=(0, 8))
 
-lbl_folder = ttk.Label(status_card, text="")
-lbl_folder.pack(anchor="w")
-lbl_filename = ttk.Label(status_card, text="")
-lbl_filename.pack(anchor="w", pady=(4, 0))
 lbl_club = ttk.Label(status_card, text="")
 lbl_club.pack(anchor="w", pady=(4, 0))
 lbl_season = ttk.Label(status_card, text="")
@@ -1867,8 +1871,6 @@ lbl_theme = ttk.Label(status_card, text="")
 lbl_theme.pack(anchor="w", pady=(4, 0))
 
 def refresh_status():
-    lbl_folder.config(text=f"Dossier PDF : {pdf_folder}")
-    lbl_filename.config(text=f"Nom PDF : {pdf_filename}")
     lbl_club.config(text=f"Club : {settings['club_name']}")
     lbl_season.config(text=f"Saison : {settings['season']}")
     lbl_theme.config(text=f"Thème : {settings['theme']}")
@@ -1888,27 +1890,6 @@ def on_theme_change(event=None):
 
 theme_box.bind("<<ComboboxSelected>>", on_theme_change)
 sidebar_theme_box.bind("<<ComboboxSelected>>", on_theme_change)
-
-# -----------------------------
-# Fonctions PDF / nom du fichier / dossier
-# -----------------------------
-def select_folder():
-    global pdf_folder
-    folder_selected = filedialog.askdirectory()
-    if folder_selected:
-        pdf_folder = folder_selected
-        refresh_status()
-        logging.debug(f"Dossier PDF sélectionné : {pdf_folder}")
-
-def set_filename():
-    global pdf_filename
-    name = simpledialog.askstring("Nom du PDF", "Entrez le nom du fichier PDF :")
-    if name:
-        if not name.lower().endswith(".pdf"):
-            name += ".pdf"
-        pdf_filename = name
-        refresh_status()
-        logging.debug(f"Nom PDF défini : {pdf_filename}")
 
 apply_theme(settings["theme"])
 refresh_status()
