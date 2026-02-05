@@ -67,39 +67,9 @@ if os.path.exists(settings_file):
 headers = ['Joueur', 'Poste', 'Âge', 'Nationalité', 'Statut', 'Option d’achat']
 
 # -----------------------------
-# Effectif par défaut
+# Effectif initial (vide au démarrage)
 # -----------------------------
-effectif = [
-    ['Gerónimo Rulli', 'Gardien', '33', 'ARG', 'Permanent (2027)', '—'],
-    ['Jeffrey de Lange', 'Gardien', '27', 'NED', 'Permanent (2027)', '—'],
-    ['Jelle Van Neck', 'Gardien', '21', 'BEL', 'Permanent', '—'],
-    ['Théo Vermot', 'Gardien', '28', 'FRA', 'Permanent (2026)', '—'],
-    ['CJ Egan-Riley', 'DC', '23', 'ENG', 'Permanent', '—'],
-    ['Leonardo Balerdi', 'DC', '27', 'ARG/ITA', 'Permanent', '—'],
-    ['Nayef Aguerd', 'DC', '29', 'MAR', 'Permanent', '—'],
-    ['Benjamin Pavard', 'DC', '29', 'FRA', 'Prêt entrant', 'OA ~15M€'],
-    ['Facundo Medina', 'DC', '26', 'ARG', 'Prêt entrant', 'OA 18M€ + 2M€ bonus'],
-    ['Emerson Palmieri', 'DG', '31', 'ITA', 'Permanent', '—'],
-    ['Amir Murillo', 'DL', '29', 'PAN', 'Permanent', '—'],
-    ['Tochukwu Nnadi', 'MDF', '22', 'NGA', 'Permanent', '—'],
-    ['Himad Abdelli', 'MC', '26', 'ALG/MG', 'Permanent', '—'],
-    ['Arthur Vermeeren', 'MC', '20', 'BEL', 'Prêt entrant', 'OA 20M€'],
-    ['Geoffrey Kondogbia', 'MDF', '32', 'CTA', 'Permanent', '—'],
-    ['Pierre-Emile Højbjerg', 'MDF', '30', 'DEN', 'Permanent', '—'],
-    ['Bilal Nadir', 'MC', '22', 'MAR', 'Permanent', '—'],
-    ['Quinten Timber', 'MC', '24', 'NED', 'Permanent', '—'],
-    ['Yanis Sellami', 'MC', '19', 'FRA/ALG', 'Permanent', '—'],
-    ['Amine Gouiri', 'AC', '25', 'ALG/FRA', 'Permanent', '—'],
-    ['Mason Greenwood', 'Ailier/AC', '24', 'ENG', 'Prêt entrant', 'Sans OA'],
-    ['Igor Paixão', 'Ailier', '25', 'BRA', 'Permanent', '—'],
-    ['Pierre-Emerick Aubameyang', 'AC', '36', 'GAB', 'Permanent', '—'],
-    ['Hamed Junior Traoré', 'Ailier/AC', '25', 'CIV', 'Prêt entrant', 'OA 8M€ + 50% revente'],
-    ['Ethan Nwaneri', 'Ailier/AC', '18', 'ENG', 'Prêt entrant', 'Sans OA'],
-    ['Tadjidine Mmadi', 'AC', '18-19', 'FRA', 'Permanent', '—'],
-    ['Neal Maupay', 'AC', '28', 'Sevilla FC', '30/06/2026', 'Sans OA'],
-    ['Angel Gomes', 'MO', '25', 'Wolverhampton', '30/06/2026', 'OA ~6M€'],
-    ['Matt O’Riley', 'MC', '23', 'Brighton', 'Prêt terminé', '—']
-]
+effectif = []
 
 formations = {
     "4-4-2": [4, 4, 2],
