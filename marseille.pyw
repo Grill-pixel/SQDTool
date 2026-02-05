@@ -1251,17 +1251,24 @@ def view_disposition():
         max_channel = max(channel[1] for channel in extrema)
         return max_channel <= threshold
 
-    def capture_canvas_image():
-        ensure_pillow_available()
-        if not PIL_AVAILABLE:
-            raise RuntimeError("Pillow n'est pas disponible pour l'export PDF.")
-        wait_for_canvas_ready()
-        canvas.update_idletasks()
-        canvas.update()
-        width = canvas.winfo_width()
-        height = canvas.winfo_height()
-        if width <= 1 or height <= 1:
-            raise RuntimeError("Surface de canvas invalide pour l'export PDF.")
+    def capture_via_imagegrab(width, height):
+        if ImageGrab is None:
+            return None
+        x = canvas.winfo_rootx()
+        y = canvas.winfo_rooty()
+        image = None
+        for _ in range(4):
+            canvas.update_idletasks()
+            canvas.update()
+            time.sleep(0.05)
+            image = ImageGrab.grab(bbox=(x, y, x + width, y + height))
+            if image and not is_mostly_dark(image):
+                return image.convert("RGB")
+        if image and not is_mostly_dark(image):
+            return image.convert("RGB")
+        return None
+
+    def capture_via_postscript(width, height):
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
                 ps_path = os.path.join(temp_dir, "disposition.ps")
@@ -1280,26 +1287,34 @@ def view_disposition():
                 image = image.convert("RGB")
                 if not is_mostly_dark(image):
                     return image
-                logging.warning("Image PostScript trop sombre, tentative de capture écran.")
+                logging.warning("Image PostScript trop sombre.")
         except Exception:
-            logging.exception("Erreur conversion PostScript, tentative de capture écran.")
-        if ImageGrab is None:
-            raise RuntimeError("Capture écran indisponible pour l'export PDF.")
-        x = canvas.winfo_rootx()
-        y = canvas.winfo_rooty()
+            logging.exception("Erreur conversion PostScript.")
+        return None
+
+    def capture_canvas_image():
+        ensure_pillow_available()
+        if not PIL_AVAILABLE:
+            raise RuntimeError("Pillow n'est pas disponible pour l'export PDF.")
+        wait_for_canvas_ready()
+        canvas.update_idletasks()
+        canvas.update()
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
         if width <= 1 or height <= 1:
             raise RuntimeError("Surface de canvas invalide pour l'export PDF.")
-        image = None
-        for _ in range(3):
-            canvas.update_idletasks()
-            canvas.update()
-            time.sleep(0.05)
-            image = ImageGrab.grab(bbox=(x, y, x + width, y + height))
-            if image and not is_mostly_dark(image):
-                break
-        if image is None:
-            raise RuntimeError("Échec de la capture écran pour l'export PDF.")
-        return image.convert("RGB")
+
+        image = capture_via_imagegrab(width, height)
+        if image:
+            return image
+
+        image = capture_via_postscript(width, height)
+        if image:
+            return image
+
+        raise RuntimeError(
+            "Impossible de capturer la disposition (capture écran et PostScript en échec)."
+        )
 
     def focus_disposition_window(keep_topmost=False):
         disp_win.deiconify()
