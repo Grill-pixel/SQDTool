@@ -1320,11 +1320,12 @@ def view_disposition():
         disp_win.deiconify()
         disp_win.lift()
         disp_win.focus_force()
-        disp_win.attributes("-topmost", True)
+        if keep_topmost:
+            disp_win.attributes("-topmost", True)
+        else:
+            disp_win.attributes("-topmost", False)
         disp_win.update_idletasks()
         disp_win.update()
-        if not keep_topmost:
-            disp_win.attributes("-topmost", False)
 
     def wait_for_canvas_ready():
         for _ in range(6):
@@ -1337,11 +1338,13 @@ def view_disposition():
             raise RuntimeError("Surface de canvas invalide pour l'export PDF.")
 
     def export_disposition_pdf():
-        focus_disposition_window(keep_topmost=True)
-        schedule_update()
-        wait_for_canvas_ready()
+        focus_disposition_window(keep_topmost=False)
+        disp_win.attributes("-topmost", False)
+        disp_win.update_idletasks()
+        disp_win.update()
 
         filename = filedialog.asksaveasfilename(
+            parent=disp_win,
             title="Enregistrer la disposition en PDF",
             initialdir=pdf_folder,
             defaultextension=".pdf",
@@ -1349,10 +1352,13 @@ def view_disposition():
             initialfile=f"Disposition_{formation_var.get()}.pdf"
         )
         if not filename:
-            disp_win.attributes("-topmost", False)
             return
 
         try:
+            focus_disposition_window(keep_topmost=True)
+            schedule_update()
+            wait_for_canvas_ready()
+            time.sleep(0.08)
             image = capture_canvas_image()
             with tempfile.TemporaryDirectory() as temp_dir:
                 png_path = os.path.join(temp_dir, "disposition.png")
