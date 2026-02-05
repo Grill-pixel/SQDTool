@@ -1251,17 +1251,35 @@ def view_disposition():
         max_channel = max(channel[1] for channel in extrema)
         return max_channel <= threshold
 
+    def get_display_scale():
+        try:
+            scale = float(disp_win.tk.call("tk", "scaling"))
+        except Exception:
+            scale = 1.0
+        if scale <= 0:
+            scale = 1.0
+        return scale
+
     def capture_via_imagegrab(width, height):
         if ImageGrab is None:
             return None
-        x = canvas.winfo_rootx()
-        y = canvas.winfo_rooty()
+        scale = get_display_scale()
+        x = int(canvas.winfo_rootx() * scale)
+        y = int(canvas.winfo_rooty() * scale)
+        grab_width = int(width * scale)
+        grab_height = int(height * scale)
         image = None
         for _ in range(4):
             canvas.update_idletasks()
             canvas.update()
             time.sleep(0.05)
-            image = ImageGrab.grab(bbox=(x, y, x + width, y + height))
+            try:
+                image = ImageGrab.grab(
+                    bbox=(x, y, x + grab_width, y + grab_height),
+                    all_screens=True
+                )
+            except TypeError:
+                image = ImageGrab.grab(bbox=(x, y, x + grab_width, y + grab_height))
             if image and not is_mostly_dark(image):
                 return image.convert("RGB")
         if image and not is_mostly_dark(image):
