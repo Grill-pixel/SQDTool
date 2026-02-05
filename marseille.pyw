@@ -1269,14 +1269,15 @@ def view_disposition():
             image = ImageGrab.grab(bbox=(x, y, x + width, y + height))
             return image.convert("RGB")
 
-    def focus_disposition_window():
+    def focus_disposition_window(keep_topmost=False):
         disp_win.deiconify()
         disp_win.lift()
         disp_win.focus_force()
         disp_win.attributes("-topmost", True)
         disp_win.update_idletasks()
         disp_win.update()
-        disp_win.attributes("-topmost", False)
+        if not keep_topmost:
+            disp_win.attributes("-topmost", False)
 
     def wait_for_canvas_ready():
         for _ in range(6):
@@ -1289,7 +1290,7 @@ def view_disposition():
             raise RuntimeError("Surface de canvas invalide pour l'export PDF.")
 
     def export_disposition_pdf():
-        focus_disposition_window()
+        focus_disposition_window(keep_topmost=True)
         schedule_update()
         wait_for_canvas_ready()
 
@@ -1301,6 +1302,7 @@ def view_disposition():
             initialfile=f"Disposition_{formation_var.get()}.pdf"
         )
         if not filename:
+            disp_win.attributes("-topmost", False)
             return
 
         try:
@@ -1321,6 +1323,8 @@ def view_disposition():
                 "Erreur",
                 f"Impossible d'exporter la disposition en PDF.\n{exc}"
             )
+        finally:
+            disp_win.attributes("-topmost", False)
 
     disposition_exporter = export_disposition_pdf
     reset_assignments_button.config(command=reset_assignments)
