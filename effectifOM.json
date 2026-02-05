@@ -1,325 +1,41 @@
-{
-  "gardiens": [
-    {
-      "joueur": "Gerónimo Rulli",
-      "poste_principal": "Gardien",
-      "age": 33,
-      "nationalite": "Argentine (ARG)",
-      "statut": "Permanent (contrat jusqu’à 2027)",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Jeffrey de Lange",
-      "poste_principal": "Gardien",
-      "age": 27,
-      "nationalite": "Néerlandais (NED)",
-      "statut": "Permanent (contrat jusqu’à 2027)",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Jelle Van Neck",
-      "poste_principal": "Gardien",
-      "age": 21,
-      "nationalite": "Belge (BEL)",
-      "statut": "Permanent",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Théo Vermot",
-      "poste_principal": "Gardien",
-      "age": 28,
-      "nationalite": "Français (FRA)",
-      "statut": "Permanent (contrat jusqu’en 2026)",
-      "option_achat": "—"
-    }
-  ],
-  "defenseurs": [
-    {
-      "joueur": "CJ Egan‑Riley",
-      "poste_principal": "Défenseur central",
-      "age": 23,
-      "nationalite": "Anglais (ENG)",
-      "statut": "Permanent",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Leonardo Balerdi",
-      "poste_principal": "Défenseur central",
-      "age": 27,
-      "nationalite": "Argentin/Italien",
-      "statut": "Permanent",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Nayef Aguerd",
-      "poste_principal": "Défenseur central",
-      "age": 29,
-      "nationalite": "Marocain (MAR)",
-      "statut": "Permanent",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Benjamin Pavard",
-      "poste_principal": "Défenseur central",
-      "age": 29,
-      "nationalite": "Français (FRA)",
-      "statut": "Prêt entrant",
-      "option_achat": "Option d’achat ~15 M€"
-    },
-    {
-      "joueur": "Facundo Medina",
-      "poste_principal": "Défenseur central",
-      "age": 26,
-      "nationalite": "Argentin (ARG)",
-      "statut": "Prêt entrant",
-      "option_achat": "Option d’achat ~18 M€ + bonus"
-    },
-    {
-      "joueur": "Emerson Palmieri",
-      "poste_principal": "Latéral gauche",
-      "age": 31,
-      "nationalite": "Italien (ITA)",
-      "statut": "Permanent",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Amir Murillo",
-      "poste_principal": "Latéral droit",
-      "age": 29,
-      "nationalite": "Panaméen (PAN)",
-      "statut": "Permanent",
-      "option_achat": "—"
-    }
-  ],
-  "milieux": [
-    {
-      "joueur": "Tochukwu Nnadi",
-      "poste_principal": "Milieu défensif",
-      "age": "~22",
-      "nationalite": "Nigérian (NGA)",
-      "statut": "Permanent",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Himad Abdelli",
-      "poste_principal": "Milieu central",
-      "age": "~26",
-      "nationalite": "Algérien/Malgache* (selon sources)",
-      "statut": "Permanent",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Arthur Vermeeren",
-      "poste_principal": "Milieu central",
-      "age": 20,
-      "nationalite": "Belge (BEL)",
-      "statut": "Prêt entrant",
-      "option_achat": "Option d’achat ~20 M€"
-    },
-    {
-      "joueur": "Geoffrey Kondogbia",
-      "poste_principal": "Milieu défensif",
-      "age": 32,
-      "nationalite": "Centrafricaine (CTA)",
-      "statut": "Permanent",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Pierre‑Emile Højbjerg",
-      "poste_principal": "Milieu défensif",
-      "age": 30,
-      "nationalite": "Danois (DEN)",
-      "statut": "Permanent",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Bilal Nadir",
-      "poste_principal": "Milieu central",
-      "age": 22,
-      "nationalite": "Marocain (MAR)",
-      "statut": "Permanent",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Quinten Timber",
-      "poste_principal": "Milieu central",
-      "age": "~24",
-      "nationalite": "Néerlandais (NED)",
-      "statut": "Permanent",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Yanis Sellami",
-      "poste_principal": "Milieu central",
-      "age": 19,
-      "nationalite": "Français/Algérien*",
-      "statut": "Permanent",
-      "option_achat": "—"
-    }
-  ],
-  "remarques": "Certains joueurs jeunes/proviennent du centre de formation, donc les doubles nationalités peuvent varier suivant les bases de données.",
-  "attaquants": [
-    {
-      "joueur": "Amine Gouiri",
-      "poste_principal": "Avant‑centre",
-      "age": 25,
-      "nationalite": "Algérien/Français",
-      "statut": "Permanent",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Mason Greenwood",
-      "poste_principal": "Ailier / Attaquant",
-      "age": 24,
-      "nationalite": "Anglais (ENG)",
-      "statut": "Prêt entrant",
-      "option_achat": "Sans option d’achat"
-    },
-    {
-      "joueur": "Igor Paixão",
-      "poste_principal": "Ailier gauche",
-      "age": 25,
-      "nationalite": "Brésilien (BRA)",
-      "statut": "Permanent",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Pierre‑Emerick Aubameyang",
-      "poste_principal": "Avant‑centre",
-      "age": 36,
-      "nationalite": "Gabonais (GAB)",
-      "statut": "Permanent",
-      "option_achat": "—"
-    },
-    {
-      "joueur": "Hamed Junior Traoré",
-      "poste_principal": "Ailier / Attaquant",
-      "age": 25,
-      "nationalite": "Ivoirien (CIV)",
-      "statut": "Prêt entrant",
-      "option_achat": "Option d’achat ~8 M€ + 50 % revente"
-    },
-    {
-      "joueur": "Ethan Nwaneri",
-      "poste_principal": "Ailier / Attaquant",
-      "age": "~18",
-      "nationalite": "Anglais (ENG)",
-      "statut": "Prêt entrant",
-      "option_achat": "Sans option d’achat"
-    },
-    {
-      "joueur": "Tadjidine Mmadi",
-      "poste_principal": "Attaquant",
-      "age": "18‑19",
-      "nationalite": "Français (FRA)",
-      "statut": "Permanent",
-      "option_achat": "—"
-    }
-  ],
-  "prets_sortants": [
-    {
-      "joueur": "Neal Maupay",
-      "poste": "Attaquant",
-      "age": 28,
-      "club_pret": "Sevilla FC (Espagne)",
-      "fin_pret": "30/06/2026",
-      "option_achat": "Aucune (simple prêt)"
-    },
-    {
-      "joueur": "Angel Gomes",
-      "poste": "Milieu offensif",
-      "age": 25,
-      "club_pret": "Wolverhampton Wanderers (Angleterre)",
-      "fin_pret": "30/06/2026",
-      "option_achat": "Option d’achat ~6 M€ (reporté, pas encore officialisé)"
-    },
-    {
-      "joueur": "Keyliane Abdallah",
-      "poste": "Défenseur / Milieu",
-      "age": "~20",
-      "club_pret": "Gimnàstic Tarragona (Espagne)",
-      "fin_pret": "30/06/2026",
-      "option_achat": "Non publiée"
-    },
-    {
-      "joueur": "Ulisses Garcia",
-      "poste": "Défenseur",
-      "age": "~29",
-      "club_pret": "Sassuolo (Italie)",
-      "fin_pret": "30/06/2026",
-      "option_achat": "Avec option d’achat (selon sources mercato)"
-    },
-    {
-      "joueur": "Soumaïla Traoré",
-      "poste": "Milieu",
-      "age": "~22",
-      "club_pret": "FC Versailles (France)",
-      "fin_pret": "30/06/2026",
-      "option_achat": "Option d’achat probable selon médias (montant non public)"
-    },
-    {
-      "joueur": "Faris Moumbagna",
-      "poste": "Attaquant",
-      "age": "~24",
-      "club_pret": "Cremonese (Italie)",
-      "fin_pret": "30/06/2026",
-      "option_achat": "Sans option d’achat publiée"
-    },
-    {
-      "joueur": "Bamo Meïté",
-      "poste": "Défenseur",
-      "age": "~25",
-      "club_pret": "FC Lorient (France)",
-      "fin_pret": "30/06/2026",
-      "option_achat": "Sans option d’achat publiée"
-    },
-    {
-      "joueur": "Amine Harit",
-      "poste": "Ailier / Attaquant",
-      "age": "~28",
-      "club_pret": "Istanbul Başakşehir (Turquie)",
-      "fin_pret": "30/06/2026",
-      "option_achat": "Sans option d’achat publiée"
-    },
-    {
-      "joueur": "Alexi Koum",
-      "poste": "Milieu",
-      "age": "~20",
-      "club_pret": "Valenciennes FC (France)",
-      "fin_pret": "30/06/2026",
-      "option_achat": "Sans OA publiée"
-    },
-    {
-      "joueur": "Rony Mimb Baheng",
-      "poste": "Attaquant",
-      "age": "~21",
-      "club_pret": "SC Aubagne‑Air‑Bel (France)",
-      "fin_pret": "30/06/2026",
-      "option_achat": "Sans OA publiée"
-    },
-    {
-      "joueur": "Raimane Daou",
-      "poste": "Milieu",
-      "age": "~21",
-      "club_pret": "SC Aubagne‑Air‑Bel (France)",
-      "fin_pret": "30/06/2026",
-      "option_achat": "Sans OA publiée"
-    },
-    {
-      "joueur": "Derek Cornelius",
-      "poste": "Défenseur",
-      "age": "~28",
-      "club_pret": "Rangers FC (Ecosse)",
-      "fin_pret": "30/06/2026",
-      "option_achat": "Sans OA publiée"
-    },
-    {
-      "joueur": "Ismaël Koné",
-      "poste": "Milieu",
-      "age": "~23",
-      "club_pret": "US Sassuolo (Italie)",
-      "fin_pret": "30/06/2026",
-      "option_achat": "Sans OA publiée"
-    }
-  ]
-}
+[
+  ["Gerónimo Rulli", "Gardien", "33", "ARG", "Permanent (2027)", "—"],
+  ["Jeffrey de Lange", "Gardien", "27", "NED", "Permanent (2027)", "—"],
+  ["Jelle Van Neck", "Gardien", "21", "BEL", "Permanent", "—"],
+  ["Théo Vermot", "Gardien", "28", "FRA", "Permanent (2026)", "—"],
+  ["CJ Egan-Riley", "Défenseur central", "23", "ENG", "Permanent", "—"],
+  ["Leonardo Balerdi", "Défenseur central", "27", "ARG/ITA", "Permanent", "—"],
+  ["Nayef Aguerd", "Défenseur central", "29", "MAR", "Permanent", "—"],
+  ["Benjamin Pavard", "Défenseur central", "29", "FRA", "Prêt entrant", "Option d’achat ~15 M€"],
+  ["Facundo Medina", "Défenseur central", "26", "ARG", "Prêt entrant", "Option d’achat ~18 M€ + bonus"],
+  ["Emerson Palmieri", "Latéral gauche", "31", "ITA", "Permanent", "—"],
+  ["Amir Murillo", "Latéral droit", "29", "PAN", "Permanent", "—"],
+  ["Tochukwu Nnadi", "Milieu défensif", "22", "NGA", "Permanent", "—"],
+  ["Himad Abdelli", "Milieu central", "26", "ALG/MG", "Permanent", "—"],
+  ["Arthur Vermeeren", "Milieu central", "20", "BEL", "Prêt entrant", "Option d’achat ~20 M€"],
+  ["Geoffrey Kondogbia", "Milieu défensif", "32", "CTA", "Permanent", "—"],
+  ["Pierre-Emile Højbjerg", "Milieu défensif", "30", "DEN", "Permanent", "—"],
+  ["Bilal Nadir", "Milieu central", "22", "MAR", "Permanent", "—"],
+  ["Quinten Timber", "Milieu central", "24", "NED", "Permanent", "—"],
+  ["Yanis Sellami", "Milieu central", "19", "FRA/ALG", "Permanent", "—"],
+  ["Amine Gouiri", "Avant-centre", "25", "ALG/FRA", "Permanent", "—"],
+  ["Mason Greenwood", "Ailier / Attaquant", "24", "ENG", "Prêt entrant", "Sans option d’achat"],
+  ["Igor Paixão", "Ailier gauche", "25", "BRA", "Permanent", "—"],
+  ["Pierre-Emerick Aubameyang", "Avant-centre", "36", "GAB", "Permanent", "—"],
+  ["Hamed Junior Traoré", "Ailier / Attaquant", "25", "CIV", "Prêt entrant", "Option d’achat ~8 M€ + 50% revente"],
+  ["Ethan Nwaneri", "Ailier / Attaquant", "18", "ENG", "Prêt entrant", "Sans option d’achat"],
+  ["Tadjidine Mmadi", "Attaquant", "19", "FRA", "Permanent", "—"],
+  ["Neal Maupay", "Attaquant", "28", "Sevilla FC", "30/06/2026", "Sans option d’achat"],
+  ["Angel Gomes", "Milieu offensif", "25", "Wolverhampton", "30/06/2026", "Option d’achat ~6 M€"],
+  ["Keyliane Abdallah", "Défenseur / Milieu", "20", "Gimnàstic Tarragona", "30/06/2026", "Option d’achat non publiée"],
+  ["Ulisses Garcia", "Défenseur", "29", "Sassuolo", "30/06/2026", "Option d’achat (selon sources)"],
+  ["Soumaïla Traoré", "Milieu", "22", "FC Versailles", "30/06/2026", "Option d’achat probable"],
+  ["Faris Moumbagna", "Attaquant", "24", "Cremonese", "30/06/2026", "Sans option d’achat"],
+  ["Bamo Meïté", "Défenseur", "25", "FC Lorient", "30/06/2026", "Sans option d’achat"],
+  ["Amine Harit", "Ailier / Attaquant", "28", "Istanbul Başakşehir", "30/06/2026", "Sans option d’achat"],
+  ["Alexi Koum", "Milieu", "20", "Valenciennes FC", "30/06/2026", "Sans option d’achat"],
+  ["Rony Mimb Baheng", "Attaquant", "21", "SC Aubagne-Air-Bel", "30/06/2026", "Sans option d’achat"],
+  ["Raimane Daou", "Milieu", "21", "SC Aubagne-Air-Bel", "30/06/2026", "Sans option d’achat"],
+  ["Derek Cornelius", "Défenseur", "28", "Rangers FC", "30/06/2026", "Sans option d’achat"],
+  ["Ismaël Koné", "Milieu", "23", "US Sassuolo", "30/06/2026", "Sans option d’achat"]
+]
