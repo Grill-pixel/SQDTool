@@ -46,6 +46,7 @@ disposition_state_file = os.path.join(os.path.dirname(__file__), "disposition_la
 edit_window = None
 disposition_window = None
 disposition_exporter = None
+disposition_refresher = None
 PDF_FONT_FAMILY = "DejaVu"
 
 default_settings = {
@@ -756,6 +757,8 @@ def view_edit_composition():
         with open(composition_file, "w", encoding="utf-8") as f:
             json.dump(effectif, f, ensure_ascii=False, indent=2)
         logging.debug(f"Composition sauvegardée : {composition_file}")
+        refresh_dashboard_metrics()
+        refresh_disposition_view()
         messagebox.showinfo("Succès", f"Composition sauvegardée :\n{composition_file}")
 
     def load_composition():
@@ -774,6 +777,8 @@ def view_edit_composition():
             refresh_tree(all_rows)
             clear_form()
             logging.debug(f"Composition chargée : {composition_file}")
+            refresh_dashboard_metrics()
+            refresh_disposition_view()
             messagebox.showinfo("Succès", f"Composition chargée :\n{composition_file}")
         except Exception as e:
             logging.exception("Erreur chargement composition")
@@ -841,7 +846,7 @@ def view_edit_composition():
 
 
 def view_disposition():
-    global disposition_window, disposition_exporter
+    global disposition_window, disposition_exporter, disposition_refresher
     if disposition_window is not None and disposition_window.winfo_exists():
         disposition_window.deiconify()
         disposition_window.lift()
@@ -856,10 +861,11 @@ def view_disposition():
     disp_win.configure(bg=get_palette()["bg"])
 
     def handle_close():
-        global disposition_window
+        global disposition_window, disposition_refresher
         if disposition_window is not None:
             disposition_window.destroy()
         disposition_window = None
+        disposition_refresher = None
 
     disp_win.protocol("WM_DELETE_WINDOW", handle_close)
 
@@ -1431,6 +1437,7 @@ def view_disposition():
             disp_win.attributes("-topmost", False)
 
     disposition_exporter = export_disposition_pdf
+    disposition_refresher = schedule_update
     reset_assignments_button.config(command=reset_assignments)
     reset_positions_button.config(command=reset_positions)
     clear_selection_button.config(command=clear_player_selection)
@@ -1658,6 +1665,10 @@ def get_effectif_metrics():
     avg_age = round(sum(ages) / len(ages), 1) if ages else "-"
     return total, loaned, avg_age
 
+def refresh_disposition_view():
+    if disposition_refresher is not None:
+        disposition_refresher()
+
 app = ttk.Frame(root, style="App.TFrame")
 app.pack(fill="both", expand=True)
 app.columnconfigure(1, weight=1)
@@ -1760,17 +1771,26 @@ stats_frame = ttk.Frame(overview_tab)
 stats_frame.grid(row=1, column=0, sticky="ew")
 stats_frame.columnconfigure((0, 1, 2), weight=1)
 
-total_players, loaned_players, avg_age = get_effectif_metrics()
-
-def build_stat_card(parent, title, value):
+def build_stat_card(parent, title):
     card = ttk.Frame(parent, style="Card.TFrame", padding=16)
     ttk.Label(card, text=title, style="CardTitle.TLabel").pack(anchor="w")
-    ttk.Label(card, text=value, style="Header.TLabel").pack(anchor="w", pady=(6, 0))
-    return card
+    value_label = ttk.Label(card, text="-", style="Header.TLabel")
+    value_label.pack(anchor="w", pady=(6, 0))
+    return card, value_label
 
-build_stat_card(stats_frame, "Joueurs", total_players).grid(row=0, column=0, sticky="ew", padx=(0, 8))
-build_stat_card(stats_frame, "Prêts en cours", loaned_players).grid(row=0, column=1, sticky="ew", padx=8)
-build_stat_card(stats_frame, "Âge moyen", avg_age).grid(row=0, column=2, sticky="ew", padx=(8, 0))
+total_card, total_label = build_stat_card(stats_frame, "Joueurs")
+loaned_card, loaned_label = build_stat_card(stats_frame, "Prêts en cours")
+avg_card, avg_label = build_stat_card(stats_frame, "Âge moyen")
+
+total_card.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+loaned_card.grid(row=0, column=1, sticky="ew", padx=8)
+avg_card.grid(row=0, column=2, sticky="ew", padx=(8, 0))
+
+def refresh_dashboard_metrics():
+    total_players, loaned_players, avg_age = get_effectif_metrics()
+    total_label.config(text=total_players)
+    loaned_label.config(text=loaned_players)
+    avg_label.config(text=avg_age)
 
 settings_tab.columnconfigure(0, weight=1)
 settings_card = ttk.Frame(settings_tab, style="Card.TFrame", padding=16)
@@ -1850,5 +1870,6 @@ sidebar_theme_box.bind("<<ComboboxSelected>>", on_theme_change)
 
 apply_theme(settings["theme"])
 refresh_status()
+refresh_dashboard_metrics()
 
 root.mainloop()
