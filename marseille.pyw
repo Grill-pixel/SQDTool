@@ -1356,10 +1356,21 @@ def view_disposition():
             raise RuntimeError("Surface de canvas invalide pour l'export PDF.")
 
     def export_disposition_pdf():
+        global pdf_folder
         focus_disposition_window(keep_topmost=False)
         disp_win.attributes("-topmost", False)
         disp_win.update_idletasks()
         disp_win.update()
+
+        folder_selected = filedialog.askdirectory(
+            parent=disp_win,
+            title="Choisir le dossier de sauvegarde"
+        )
+        if not folder_selected:
+            return
+        pdf_folder = folder_selected
+        refresh_status()
+        logging.debug(f"Dossier PDF sélectionné pour la disposition : {pdf_folder}")
 
         filename = filedialog.asksaveasfilename(
             parent=disp_win,
