@@ -42,6 +42,7 @@ default_composition = os.path.join(os.path.dirname(__file__), "composition.json"
 legacy_composition = os.path.join(os.path.dirname(__file__), "effectifOM.json")
 composition_file = legacy_composition if os.path.exists(legacy_composition) else default_composition
 settings_file = os.path.join(os.path.dirname(__file__), "settings.json")
+disposition_state_file = os.path.join(os.path.dirname(__file__), "disposition_layout.json")
 edit_window = None
 disposition_window = None
 disposition_exporter = None
@@ -166,6 +167,53 @@ def load_effectif_from_file(path):
     if not normalized:
         raise ValueError("Composition vide ou format non reconnu.")
     return normalized
+
+
+def load_disposition_state():
+    if not os.path.exists(disposition_state_file):
+        return {"player_overrides_by_formation": {}, "slot_offsets_by_formation": {}}
+    try:
+        with open(disposition_state_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        player_overrides = data.get("player_overrides_by_formation", {}) or {}
+        slot_offsets = data.get("slot_offsets_by_formation", {}) or {}
+        cleaned_offsets = {}
+        for formation, offsets in slot_offsets.items():
+            if not isinstance(offsets, dict):
+                continue
+            cleaned_offsets[formation] = {
+                slot_id: tuple(value) for slot_id, value in offsets.items()
+                if isinstance(value, (list, tuple)) and len(value) == 2
+            }
+        return {
+            "player_overrides_by_formation": player_overrides,
+            "slot_offsets_by_formation": cleaned_offsets
+        }
+    except Exception as e:
+        logging.error(f"Erreur chargement disposition : {e}")
+        return {"player_overrides_by_formation": {}, "slot_offsets_by_formation": {}}
+
+
+def save_disposition_state(player_overrides, slot_offsets):
+    try:
+        serialized_offsets = {}
+        for formation, offsets in slot_offsets.items():
+            if not isinstance(offsets, dict):
+                continue
+            serialized_offsets[formation] = {
+                slot_id: list(value) for slot_id, value in offsets.items()
+            }
+        payload = {
+            "player_overrides_by_formation": player_overrides,
+            "slot_offsets_by_formation": serialized_offsets
+        }
+        with open(disposition_state_file, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        logging.debug(f"Disposition sauvegardée : {disposition_state_file}")
+        return True
+    except Exception as e:
+        logging.error(f"Erreur sauvegarde disposition : {e}")
+        return False
 
 
 def normalize_poste_text(value):
@@ -878,8 +926,9 @@ def view_disposition():
     canvas = tk.Canvas(canvas_frame, bg="#2E7D32", highlightthickness=0)
     canvas.pack(fill="both", expand=True)
 
-    player_overrides_by_formation = {}
-    slot_offsets_by_formation = {}
+    saved_state = load_disposition_state()
+    player_overrides_by_formation = dict(saved_state.get("player_overrides_by_formation", {}))
+    slot_offsets_by_formation = dict(saved_state.get("slot_offsets_by_formation", {}))
     slot_positions = {}
     current_slots = []
     current_assignments = []
@@ -953,6 +1002,23 @@ def view_disposition():
     def clear_player_selection():
         selected_player_var.set("Aucun")
         drag_state.update({"type": None, "player": None, "slot_id": None})
+
+    def save_current_disposition(show_message=True):
+        if save_disposition_state(player_overrides_by_formation, slot_offsets_by_formation):
+            if show_message:
+                messagebox.showinfo("Disposition sauvegardée", "Les placements ont été enregistrés.")
+        elif show_message:
+            messagebox.showerror("Erreur", "Impossible d'enregistrer la disposition.")
+
+    def reload_disposition():
+        state = load_disposition_state()
+        player_overrides_by_formation.clear()
+        slot_offsets_by_formation.clear()
+        player_overrides_by_formation.update(state.get("player_overrides_by_formation", {}))
+        slot_offsets_by_formation.update(state.get("slot_offsets_by_formation", {}))
+        selected_player_var.set("Aucun")
+        selected_slot_id["value"] = None
+        update_view()
 
     def draw_pitch():
         canvas.delete("pitch")
@@ -1227,6 +1293,8 @@ def view_disposition():
     reset_assignments_button.config(command=reset_assignments)
     reset_positions_button.config(command=reset_positions)
     clear_selection_button.config(command=clear_player_selection)
+    ttk.Button(actions_frame, text="Sauvegarder la disposition", command=save_current_disposition, style="Primary.TButton").pack(fill="x", padx=8, pady=(0, 6))
+    ttk.Button(actions_frame, text="Charger la disposition", command=reload_disposition, style="Secondary.TButton").pack(fill="x", padx=8, pady=(0, 6))
     ttk.Button(actions_frame, text="Exporter en PDF", command=export_disposition_pdf, style="Primary.TButton").pack(fill="x", padx=8, pady=(0, 8))
 
     formation_box.bind("<<ComboboxSelected>>", schedule_update)
