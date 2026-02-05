@@ -104,7 +104,7 @@ formations = {
     "4-3-3": [4, 3, 3],
     "4-2-3-1": [4, 2, 3, 1],
     "4-1-4-1": [4, 1, 4, 1],
-    "3-5-1": [3, 5, 1],
+    "4-5-1": [4, 5, 1],
     "3-5-2": [3, 5, 2],
     "3-4-3": [3, 4, 3],
     "5-3-2": [5, 3, 2],
@@ -1425,6 +1425,8 @@ def apply_theme(theme_name):
     style.configure("TNotebook.Tab", font=("Segoe UI", 10, "bold"), padding=(14, 8), background=palette["card"], foreground=palette["primary"])
     style.map("TNotebook.Tab", background=[("selected", palette["accent"])], foreground=[("selected", palette["text"])])
     settings["theme"] = theme_name
+    if "theme_var" in globals():
+        theme_var.set(theme_name)
     save_settings()
 
 def save_settings():
@@ -1460,23 +1462,12 @@ content.grid(row=0, column=1, sticky="nsew")
 content.columnconfigure(0, weight=1)
 content.rowconfigure(1, weight=1)
 
+theme_var = tk.StringVar(value=settings["theme"])
+
 sidebar_title = ttk.Label(sidebar, text=settings["club_name"], style="Sidebar.TLabel")
 sidebar_title.pack(anchor="w")
 sidebar_season = ttk.Label(sidebar, text=f"Saison {settings['season']}", style="SidebarMuted.TLabel")
 sidebar_season.pack(anchor="w", pady=(4, 16))
-
-ttk.Label(sidebar, text="Navigation", style="SidebarMuted.TLabel").pack(anchor="w", pady=(0, 6))
-ttk.Button(sidebar, text="Tableau effectif", command=view_edit_composition, style="Sidebar.TButton").pack(fill="x", pady=4)
-ttk.Button(sidebar, text="Disposition", command=view_disposition, style="Sidebar.TButton").pack(fill="x", pady=4)
-ttk.Button(sidebar, text="PDF composition", command=generate_composition_pdf, style="Sidebar.TButton").pack(fill="x", pady=4)
-ttk.Button(sidebar, text="PDF disposition", command=export_disposition_from_sidebar, style="Sidebar.TButton").pack(fill="x", pady=4)
-
-ttk.Separator(sidebar).pack(fill="x", pady=16)
-
-ttk.Label(sidebar, text="Actions rapides", style="SidebarMuted.TLabel").pack(anchor="w", pady=(0, 6))
-ttk.Button(sidebar, text="Dossier PDF", command=lambda: select_folder(), style="Sidebar.TButton").pack(fill="x", pady=4)
-ttk.Button(sidebar, text="Nom du PDF", command=lambda: set_filename(), style="Sidebar.TButton").pack(fill="x", pady=4)
-ttk.Button(sidebar, text="Quitter", command=root.destroy, style="Sidebar.TButton").pack(fill="x", pady=(12, 0))
 
 header = ttk.Label(content, text=f"Centre de contrôle · {settings['club_name']}", style="Header.TLabel")
 header.grid(row=0, column=0, sticky="w", pady=(0, 12))
@@ -1489,10 +1480,62 @@ settings_tab = ttk.Frame(notebook)
 actions_tab = ttk.Frame(notebook)
 status_tab = ttk.Frame(notebook)
 
-notebook.add(overview_tab, text="Aperçu")
+notebook.add(overview_tab, text="Accueil")
 notebook.add(settings_tab, text="Paramètres")
 notebook.add(actions_tab, text="Actions")
 notebook.add(status_tab, text="Statut")
+
+def open_tab(tab):
+    notebook.select(tab)
+    notebook.focus_set()
+
+def open_overview():
+    open_tab(overview_tab)
+
+def open_settings():
+    open_tab(settings_tab)
+
+def open_actions():
+    open_tab(actions_tab)
+
+def open_status():
+    open_tab(status_tab)
+
+sidebar_nav = ttk.Frame(sidebar, style="Sidebar.TFrame")
+sidebar_nav.pack(fill="x", pady=(0, 12))
+ttk.Label(sidebar_nav, text="Navigation", style="SidebarMuted.TLabel").pack(anchor="w", pady=(0, 6))
+ttk.Button(sidebar_nav, text="Accueil", command=open_overview, style="Sidebar.TButton").pack(fill="x", pady=4)
+ttk.Button(sidebar_nav, text="Paramètres", command=open_settings, style="Sidebar.TButton").pack(fill="x", pady=4)
+ttk.Button(sidebar_nav, text="Actions", command=open_actions, style="Sidebar.TButton").pack(fill="x", pady=4)
+ttk.Button(sidebar_nav, text="Statut", command=open_status, style="Sidebar.TButton").pack(fill="x", pady=4)
+
+ttk.Separator(sidebar).pack(fill="x", pady=12)
+
+sidebar_manage = ttk.Frame(sidebar, style="Sidebar.TFrame")
+sidebar_manage.pack(fill="x", pady=(0, 12))
+ttk.Label(sidebar_manage, text="Gestion de l'effectif", style="SidebarMuted.TLabel").pack(anchor="w", pady=(0, 6))
+ttk.Button(sidebar_manage, text="Éditer l'effectif", command=view_edit_composition, style="Sidebar.TButton").pack(fill="x", pady=4)
+ttk.Button(sidebar_manage, text="Disposition terrain", command=view_disposition, style="Sidebar.TButton").pack(fill="x", pady=4)
+
+ttk.Separator(sidebar).pack(fill="x", pady=12)
+
+sidebar_exports = ttk.Frame(sidebar, style="Sidebar.TFrame")
+sidebar_exports.pack(fill="x", pady=(0, 12))
+ttk.Label(sidebar_exports, text="Exports rapides", style="SidebarMuted.TLabel").pack(anchor="w", pady=(0, 6))
+ttk.Button(sidebar_exports, text="PDF composition", command=generate_composition_pdf, style="Sidebar.TButton").pack(fill="x", pady=4)
+ttk.Button(sidebar_exports, text="PDF disposition", command=export_disposition_from_sidebar, style="Sidebar.TButton").pack(fill="x", pady=4)
+ttk.Button(sidebar_exports, text="Dossier PDF", command=lambda: select_folder(), style="Sidebar.TButton").pack(fill="x", pady=4)
+ttk.Button(sidebar_exports, text="Nom du PDF", command=lambda: set_filename(), style="Sidebar.TButton").pack(fill="x", pady=4)
+
+ttk.Separator(sidebar).pack(fill="x", pady=12)
+
+sidebar_theme = ttk.Frame(sidebar, style="Sidebar.TFrame")
+sidebar_theme.pack(fill="x", pady=(0, 12))
+ttk.Label(sidebar_theme, text="Thème", style="SidebarMuted.TLabel").pack(anchor="w", pady=(0, 6))
+sidebar_theme_box = ttk.Combobox(sidebar_theme, textvariable=theme_var, values=sorted(themes.keys()), state="readonly")
+sidebar_theme_box.pack(fill="x", pady=4)
+
+ttk.Button(sidebar, text="Quitter", command=root.destroy, style="Sidebar.TButton").pack(fill="x", pady=(8, 0))
 
 overview_tab.columnconfigure(0, weight=1)
 
@@ -1534,7 +1577,6 @@ settings_grid.columnconfigure(3, weight=1)
 
 club_var = tk.StringVar(value=settings["club_name"])
 season_var = tk.StringVar(value=settings["season"])
-theme_var = tk.StringVar(value=settings["theme"])
 
 ttk.Label(settings_grid, text="Nom du club").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=6)
 club_entry = ttk.Entry(settings_grid, textvariable=club_var)
@@ -1605,6 +1647,7 @@ def on_theme_change(event=None):
     apply_theme(theme_var.get())
 
 theme_box.bind("<<ComboboxSelected>>", on_theme_change)
+sidebar_theme_box.bind("<<ComboboxSelected>>", on_theme_change)
 
 # -----------------------------
 # Fonctions PDF / nom du fichier / dossier
