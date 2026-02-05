@@ -1243,31 +1243,63 @@ def view_disposition():
         from PIL import Image, ImageGrab
         PIL_AVAILABLE = True
 
+    def is_mostly_dark(image, threshold=12):
+        try:
+            extrema = image.convert("RGB").getextrema()
+        except Exception:
+            return False
+        max_channel = max(channel[1] for channel in extrema)
+        return max_channel <= threshold
+
     def capture_canvas_image():
         ensure_pillow_available()
         if not PIL_AVAILABLE:
             raise RuntimeError("Pillow n'est pas disponible pour l'export PDF.")
         wait_for_canvas_ready()
+        canvas.update_idletasks()
+        canvas.update()
+        width = canvas.winfo_width()
+        height = canvas.winfo_height()
+        if width <= 1 or height <= 1:
+            raise RuntimeError("Surface de canvas invalide pour l'export PDF.")
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
                 ps_path = os.path.join(temp_dir, "disposition.ps")
-                canvas.postscript(file=ps_path, colormode="color")
+                canvas.postscript(
+                    file=ps_path,
+                    colormode="color",
+                    x=0,
+                    y=0,
+                    width=width,
+                    height=height,
+                    pagewidth=width,
+                    pageheight=height
+                )
                 image = Image.open(ps_path)
                 image.load()
-                return image.convert("RGB")
+                image = image.convert("RGB")
+                if not is_mostly_dark(image):
+                    return image
+                logging.warning("Image PostScript trop sombre, tentative de capture écran.")
         except Exception:
             logging.exception("Erreur conversion PostScript, tentative de capture écran.")
-            if ImageGrab is None:
-                raise
+        if ImageGrab is None:
+            raise RuntimeError("Capture écran indisponible pour l'export PDF.")
+        x = canvas.winfo_rootx()
+        y = canvas.winfo_rooty()
+        if width <= 1 or height <= 1:
+            raise RuntimeError("Surface de canvas invalide pour l'export PDF.")
+        image = None
+        for _ in range(3):
+            canvas.update_idletasks()
             canvas.update()
-            x = canvas.winfo_rootx()
-            y = canvas.winfo_rooty()
-            width = canvas.winfo_width()
-            height = canvas.winfo_height()
-            if width <= 1 or height <= 1:
-                raise RuntimeError("Surface de canvas invalide pour l'export PDF.")
+            time.sleep(0.05)
             image = ImageGrab.grab(bbox=(x, y, x + width, y + height))
-            return image.convert("RGB")
+            if image and not is_mostly_dark(image):
+                break
+        if image is None:
+            raise RuntimeError("Échec de la capture écran pour l'export PDF.")
+        return image.convert("RGB")
 
     def focus_disposition_window(keep_topmost=False):
         disp_win.deiconify()
