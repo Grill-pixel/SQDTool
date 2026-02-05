@@ -46,6 +46,7 @@ disposition_state_file = os.path.join(os.path.dirname(__file__), "disposition_la
 edit_window = None
 disposition_window = None
 disposition_exporter = None
+PDF_FONT_FAMILY = "DejaVu"
 
 default_settings = {
     "club_name": "Olympique de Marseille",
@@ -158,6 +159,12 @@ def normalize_effectif(data):
                     rows.append(row)
         return rows
     return []
+
+
+def safe_cell(row, index, default=""):
+    if isinstance(row, (list, tuple)) and len(row) > index:
+        return row[index]
+    return default
 
 
 def load_effectif_from_file(path):
@@ -399,8 +406,8 @@ def assign_players_to_slots(slots, players, player_overrides=None):
     for row in players:
         if not row:
             continue
-        name = str(row[0]).strip()
-        poste = str(row[1]).strip() if len(row) > 1 else ""
+        name = str(safe_cell(row, 0)).strip()
+        poste = str(safe_cell(row, 1)).strip()
         if not name:
             continue
         role = map_poste_to_role(poste)
@@ -457,7 +464,7 @@ if os.path.exists(composition_file):
 # -----------------------------
 class PDF(FPDF):
     def header(self):
-        self.set_font('DejaVu', 'B', 16)
+        self.set_font(PDF_FONT_FAMILY, 'B', 16)
         self.set_fill_color(0, 51, 102)
         self.set_text_color(255, 255, 255)
         self.cell(0, 10, f"{settings['club_name']} {settings['season']}", 0, 1, 'C', 1)
@@ -465,7 +472,7 @@ class PDF(FPDF):
 
     def footer(self):
         self.set_y(-15)
-        self.set_font('DejaVu', 'I', 8)
+        self.set_font(PDF_FONT_FAMILY, 'I', 8)
         self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
 
 def wrap_text(pdf, text, width):
@@ -505,7 +512,8 @@ def compute_column_widths(pdf, headers, data, min_width=20, padding=6):
     for i, header in enumerate(headers):
         max_width = pdf.get_string_width(header)
         for row in data:
-            max_width = max(max_width, pdf.get_string_width(str(row[i])))
+            cell = row[i] if isinstance(row, (list, tuple)) and len(row) > i else ""
+            max_width = max(max_width, pdf.get_string_width(str(cell)))
         widths.append(max_width + padding)
     total = sum(widths)
     available = pdf.w - pdf.l_margin - pdf.r_margin
@@ -516,19 +524,19 @@ def compute_column_widths(pdf, headers, data, min_width=20, padding=6):
 
 
 def add_table(pdf, title, headers, data):
-    pdf.set_font('DejaVu', 'B', 12)
+    pdf.set_font(PDF_FONT_FAMILY, 'B', 12)
     pdf.set_fill_color(200, 200, 200)
     pdf.cell(0, 10, title, 0, 1, 'L', 1)
     col_widths = compute_column_widths(pdf, headers, data)
 
     def render_header():
-        pdf.set_font('DejaVu', 'B', 10)
+        pdf.set_font(PDF_FONT_FAMILY, 'B', 10)
         for w, header in zip(col_widths, headers):
             pdf.cell(w, 8, header, 1, 0, 'C', 1)
         pdf.ln()
 
     render_header()
-    pdf.set_font('DejaVu', '', 10)
+    pdf.set_font(PDF_FONT_FAMILY, '', 10)
     line_height = pdf.font_size * 1.6
     for row in data:
         wrapped_cells = [wrap_text(pdf, item, width) for item, width in zip(row, col_widths)]
@@ -564,24 +572,65 @@ def build_composition_rows():
     for row in effectif:
         if not row:
             continue
-        joueur = row[0] if len(row) > 0 else ""
-        poste = row[1] if len(row) > 1 else ""
-        age = row[2] if len(row) > 2 else ""
-        nationalite = row[3] if len(row) > 3 else ""
-        statut = row[4] if len(row) > 4 else ""
-        clause = row[5] if len(row) > 5 else ""
+        joueur = safe_cell(row, 0)
+        poste = safe_cell(row, 1)
+        age = safe_cell(row, 2)
+        nationalite = safe_cell(row, 3)
+        statut = safe_cell(row, 4)
+        clause = safe_cell(row, 5)
         fin_contrat = extract_contract_end(statut)
         rows.append([joueur, poste, age, nationalite, statut, clause, fin_contrat])
     return rows
 
 
+def find_font_file(paths):
+    for path in paths:
+        if path and os.path.exists(path):
+            return path
+    return None
+
+
+def resolve_font_paths():
+    font_dirs = [
+        r"C:\Windows\Fonts",
+        "/usr/share/fonts/truetype/dejavu",
+        "/usr/local/share/fonts",
+        "/Library/Fonts",
+        "/System/Library/Fonts/Supplemental"
+    ]
+    regular_candidates = [
+        os.path.join(directory, "DejaVuSans.ttf") for directory in font_dirs
+    ]
+    bold_candidates = [
+        os.path.join(directory, "DejaVuSans-Bold.ttf") for directory in font_dirs
+    ]
+    italic_candidates = [
+        os.path.join(directory, "DejaVuSans-Oblique.ttf") for directory in font_dirs
+    ]
+    regular = find_font_file(regular_candidates)
+    bold = find_font_file(bold_candidates)
+    italic = find_font_file(italic_candidates)
+    if regular and not bold:
+        bold = regular
+    if regular and not italic:
+        italic = regular
+    return {"regular": regular, "bold": bold, "italic": italic}
+
+
 def generate_composition_pdf():
+    global PDF_FONT_FAMILY
     try:
         logging.debug("Début génération PDF composition")
         pdf = PDF('L', 'mm', 'A4')
-        pdf.add_font('DejaVu', '', r'C:\Windows\Fonts\DejaVuSans.ttf', uni=True)
-        pdf.add_font('DejaVu', 'B', r'C:\Windows\Fonts\DejaVuSans-Bold.ttf', uni=True)
-        pdf.add_font('DejaVu', 'I', r'C:\Windows\Fonts\DejaVuSans-Oblique.ttf', uni=True)
+        font_paths = resolve_font_paths()
+        if font_paths["regular"]:
+            pdf.add_font('DejaVu', '', font_paths["regular"], uni=True)
+            pdf.add_font('DejaVu', 'B', font_paths["bold"], uni=True)
+            pdf.add_font('DejaVu', 'I', font_paths["italic"], uni=True)
+            PDF_FONT_FAMILY = "DejaVu"
+        else:
+            PDF_FONT_FAMILY = "Helvetica"
+            logging.warning("Police DejaVu introuvable, utilisation d'Helvetica (UTF-8 limité).")
         pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
 
@@ -1239,9 +1288,13 @@ def view_disposition():
         global PIL_AVAILABLE, Image, ImageGrab
         if PIL_AVAILABLE:
             return
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pillow"])
-        from PIL import Image, ImageGrab
-        PIL_AVAILABLE = True
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "pillow"])
+            from PIL import Image, ImageGrab
+            PIL_AVAILABLE = True
+        except Exception as exc:
+            logging.exception("Installation Pillow impossible.")
+            raise RuntimeError("Installation de Pillow impossible. Vérifie ta connexion ou installe-le manuellement.") from exc
 
     def is_mostly_dark(image, threshold=12):
         try:
@@ -1626,10 +1679,10 @@ def save_settings():
 
 def get_effectif_metrics():
     total = len(effectif)
-    loaned = sum(1 for row in effectif if "prêt" in str(row[4]).lower())
+    loaned = sum(1 for row in effectif if "prêt" in str(safe_cell(row, 4)).lower())
     ages = []
     for row in effectif:
-        age_text = str(row[2])
+        age_text = str(safe_cell(row, 2))
         digits = [int(x) for x in age_text.replace(" ", "").split("-") if x.isdigit()]
         if digits:
             ages.append(sum(digits) / len(digits))

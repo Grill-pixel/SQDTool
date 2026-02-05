@@ -4,24 +4,24 @@
 ![UI](https://img.shields.io/badge/UI-Tkinter-0F172A)
 ![License](https://img.shields.io/badge/License-MIT-10B981)
 
-**SQDTool** is a Tkinter desktop app to manage a squad, build a tactical layout, and export clean PDFs ready to share. It features a flexible roster editor, an interactive pitch view, and a modern theme system.
+**SQDTool** is a Tkinter desktop application built to manage a squad, create a tactical lineup visually, and export clean, shareable PDFs. It combines a roster editor, an interactive pitch view, and theming for a polished experience.
 
 **Languages:** [Français](README.md) · [العربية](README.ar.md) · [License](LICENSE)
 
 ---
 
-## Table of contents
+## Table of Contents
 
 - [Features](#features)
-- [Quick start](#quick-start)
-- [Installation](#installation)
-- [Usage](#usage)
-  - [Club settings](#club-settings)
-  - [Squad editor](#squad-editor)
-  - [Disposition (pitch)](#disposition-pitch)
-  - [PDF exports](#pdf-exports)
-- [Files & persistence](#files--persistence)
-- [Customization](#customization)
+- [Requirements](#requirements)
+- [Quick Installation](#quick-installation)
+- [User Guide](#user-guide)
+  - [1) Club settings](#1-club-settings)
+  - [2) Squad management](#2-squad-management)
+  - [3) Tactical layout](#3-tactical-layout)
+  - [4) PDF exports](#4-pdf-exports)
+- [Files, persistence, formats](#files-persistence-formats)
+- [Theme customization](#theme-customization)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
@@ -29,25 +29,27 @@
 
 ## Features
 
-- **Full squad management**: add, edit, delete players in seconds.
-- **Interactive tactical disposition**: place players and reposition slots manually.
-- **Squad PDF**: structured by positions.
-- **Disposition PDF**: a faithful export of the on-screen pitch.
-- **Modern themes**: 12 built-in palettes, auto-save settings.
-- **Persistent settings**: club name, season, and theme.
+- **Full squad management**: add, edit, delete in one click.
+- **Rich editor**: live search, player form, JSON save/load.
+- **Interactive tactical layout**: role-based placement + manual position tweaks.
+- **PDF exports**:
+  - **Squad PDF** (structured columns)
+  - **Lineup PDF** (faithful capture of the pitch view)
+- **Modern themes**: 12 built-in palettes, auto-saved.
+- **Persistence**: club name, season, theme, composition, and layout saved.
 
 ---
 
-## Quick start
+## Requirements
 
-1. Launch the app: `python marseille.pyw`.
-2. Edit the roster in **Edit composition**.
-3. Arrange the team in **Disposition**.
-4. Export PDFs for the squad and the pitch.
+- **Python 3.9+**
+- **pip** access (to install dependencies if missing)
+
+> Dependencies: `fpdf2` (PDF export) and `Pillow` (lineup capture). They are installed automatically when needed.
 
 ---
 
-## Installation
+## Quick Installation
 
 ```bash
 git clone <your-repo>
@@ -55,58 +57,65 @@ cd SQDTool
 python marseille.pyw
 ```
 
-> On first run, **fpdf2** is installed automatically if needed. The disposition export installs **Pillow** if required.
-
 ---
 
-## Usage
+## User Guide
 
-### Club settings
-In **Club settings**, you can edit:
+### 1) Club settings
+In the **Settings** tab you can edit:
 
 - **Club name**
 - **Season**
 - **Theme**
 
-Click **Apply** to refresh the interface and exports.
+Click **Apply** to update the UI and exports.
 
-### Squad editor
-Open **Edit composition** to:
+### 2) Squad management
+Open **Edit squad** to:
 
-- Add a player (name, role, age, nationality, status, option).
-- Update existing rows.
+- Add a player (name, position, age, nationality, status, option).
+- Update an existing row.
 - Delete selected entries.
-- Save the composition as JSON.
+- Load/Save squad data as JSON.
 
-### Disposition (pitch)
-The **Disposition** view lets you build a tactical layout on a half pitch:
+### 3) Tactical layout
+The **Pitch layout** view lets you build a lineup on a half-pitch:
 
-- **Player placement mode**: select a player, then click a slot.
-- **Slot movement mode**: drag slots to fine-tune spacing.
-- **Refresh roster**: reloads the squad list if it changes.
-- **Reset**: clear placements or slot positions.
+- **Player placement mode**: select a player, click a role to assign.
+- **Slot move mode**: drag role slots to fine-tune spacing.
+- **Save / Load**: store placements and positions per formation.
+- **Reset**: clear assignments or positions.
 
-### PDF exports
+### 4) PDF exports
 
-- **Squad PDF**: use **Generate PDF** (grouped by roles).
-- **Disposition PDF**: use **Export to PDF** inside the disposition window.
+- **Squad PDF**: click **Squad PDF** from the sidebar or Actions tab.
+- **Lineup PDF**: click **Export to PDF** in the layout window.
 
-The disposition PDF is a **faithful snapshot** of the pitch (slots, names, layout).
-
----
-
-## Files & persistence
-
-- `composition.json` (or `effectifOM.json`): squad data.
-- `settings.json`: club name, season, theme.
-- `om_program_logs.txt`: runtime logs.
-- `PDFs/`: PDF exports.
+Exports match the **current UI state** (titles, theme, positions).
 
 ---
 
-## Customization
+## Files, persistence, formats
 
-Add a theme in `marseille.pyw` under the `themes` dictionary:
+| File / folder | Purpose |
+| --- | --- |
+| `effectifOM.json` | Default squad if `composition.json` does not exist |
+| `composition.json` | Saved squad data (array or dictionary formats) |
+| `settings.json` | Club name, season, theme |
+| `disposition_layout.json` | Saved layout positions by formation |
+| `PDFs/` | PDF exports |
+| `om_program_logs.txt` | Runtime logs |
+
+### Supported squad formats
+The squad file can be:
+- a list of rows `[[player, position, age, nationality, status, option], ...]`,
+- or a dictionary of categories, which is normalized automatically.
+
+---
+
+## Theme customization
+
+Themes are defined in `marseille.pyw` via the `themes` dictionary:
 
 ```python
 "My Theme": {
@@ -125,12 +134,13 @@ Add a theme in `marseille.pyw` under the `themes` dictionary:
 
 ## Troubleshooting
 
-- **PDF export error**: ensure internet access for the initial install of `fpdf2` and `pillow`.
-- **Missing PDF**: confirm the export folder you selected.
-- **Truncated labels**: expand the window before exporting the disposition.
+- **PDF export fails**: ensure `fpdf2` is installed (network required on first run).
+- **Lineup export error**: `Pillow` is required; offline installs may fail.
+- **Truncated labels**: enlarge the layout window before exporting.
+- **Missing fonts**: on some systems the PDF export may use a fallback font.
 
 ---
 
 ## License
 
-This project is released under the MIT license. See `LICENSE`.
+This project is licensed under MIT. See `LICENSE`.
