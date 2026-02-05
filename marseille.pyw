@@ -859,8 +859,41 @@ def view_disposition():
     canvas_frame = ttk.Frame(content)
     canvas_frame.pack(side="left", fill="both", expand=True)
 
-    controls = ttk.Frame(content, padding=(16, 0, 0, 0))
-    controls.pack(side="right", fill="y")
+    controls_container = ttk.Frame(content)
+    controls_container.pack(side="right", fill="y")
+    controls_canvas = tk.Canvas(
+        controls_container,
+        highlightthickness=0,
+        bg=get_palette()["bg"],
+        width=280
+    )
+    controls_canvas.pack(side="left", fill="y", expand=True)
+    controls_scrollbar = ttk.Scrollbar(controls_container, orient="vertical", command=controls_canvas.yview)
+    controls_scrollbar.pack(side="right", fill="y")
+    controls_canvas.configure(yscrollcommand=controls_scrollbar.set)
+
+    controls = ttk.Frame(controls_canvas, padding=(16, 0, 0, 0))
+    controls_window = controls_canvas.create_window((0, 0), window=controls, anchor="nw")
+
+    def sync_controls_scrollregion(event=None):
+        controls_canvas.configure(scrollregion=controls_canvas.bbox("all"))
+
+    def sync_controls_width(event):
+        controls_canvas.itemconfigure(controls_window, width=event.width)
+
+    def on_controls_mousewheel(event):
+        controls_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    def bind_controls_mousewheel(event):
+        controls_canvas.bind_all("<MouseWheel>", on_controls_mousewheel)
+
+    def unbind_controls_mousewheel(event):
+        controls_canvas.unbind_all("<MouseWheel>")
+
+    controls.bind("<Configure>", sync_controls_scrollregion)
+    controls_canvas.bind("<Configure>", sync_controls_width)
+    controls_canvas.bind("<Enter>", bind_controls_mousewheel)
+    controls_canvas.bind("<Leave>", unbind_controls_mousewheel)
 
     formation_var = tk.StringVar(value="4-4-2")
     formation_frame = ttk.Labelframe(controls, text="Formation")
