@@ -1421,16 +1421,6 @@ def view_disposition():
         disp_win.update_idletasks()
         disp_win.update()
 
-        folder_selected = filedialog.askdirectory(
-            parent=disp_win,
-            title="Choisir le dossier de sauvegarde"
-        )
-        if not folder_selected:
-            return
-        pdf_folder = folder_selected
-        refresh_status()
-        logging.debug(f"Dossier PDF sélectionné pour la disposition : {pdf_folder}")
-
         filename = filedialog.asksaveasfilename(
             parent=disp_win,
             title="Enregistrer la disposition en PDF",
@@ -1441,6 +1431,9 @@ def view_disposition():
         )
         if not filename:
             return
+        pdf_folder = os.path.dirname(filename) or pdf_folder
+        refresh_status()
+        logging.debug(f"Dossier PDF sélectionné pour la disposition : {pdf_folder}")
 
         try:
             focus_disposition_window(keep_topmost=True)
