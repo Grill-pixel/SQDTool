@@ -451,13 +451,7 @@ def assign_players_to_slots(slots, players, player_overrides=None):
     return assignments
 
 
-# Charger composition sauvegardée si existante
-if os.path.exists(composition_file):
-    try:
-        effectif = load_effectif_from_file(composition_file)
-        logging.debug("Composition chargée depuis fichier JSON")
-    except Exception as e:
-        logging.error(f"Erreur chargement composition : {e}")
+# Aucune composition n'est chargée automatiquement au démarrage.
 
 # -----------------------------
 # PDF UTF-8 avec FPDF2
