@@ -1041,21 +1041,29 @@ def view_disposition():
         if event is not None:
             player_menu.post(event.x_root, event.y_root)
 
+    def set_selected_player(player_name=None, slot_id=None):
+        if player_name:
+            selected_player_var.set(player_name)
+            drag_state.update({"type": "player", "player": player_name, "slot_id": slot_id})
+        else:
+            selected_player_var.set("Aucun")
+            drag_state.update({"type": None, "player": None, "slot_id": None})
+            leftover_list.selection_clear(0, tk.END)
+
     def start_player_drag(player_name, slot_id=None):
-        drag_state.update({"type": "player", "player": player_name, "slot_id": slot_id})
-        selected_player_var.set(player_name)
+        set_selected_player(player_name, slot_id)
 
     def assign_player_to_slot(player_name, slot_id):
         if not player_name or not slot_id:
             return
         overrides = current_overrides()
         overrides[player_name] = slot_id
-        drag_state.update({"type": None, "player": None, "slot_id": None})
+        set_selected_player(None)
         update_view()
 
     def reset_assignments():
         current_overrides().clear()
-        selected_player_var.set("Aucun")
+        set_selected_player(None)
         update_view()
 
     def reset_positions():
@@ -1064,8 +1072,7 @@ def view_disposition():
         update_view()
 
     def clear_player_selection():
-        selected_player_var.set("Aucun")
-        drag_state.update({"type": None, "player": None, "slot_id": None})
+        set_selected_player(None)
 
     def save_current_disposition(show_message=True):
         if save_disposition_state(player_overrides_by_formation, slot_offsets_by_formation):
@@ -1210,7 +1217,7 @@ def view_disposition():
         if not selection:
             return
         player_name = leftover_list.get(selection[0])
-        selected_player_var.set(player_name)
+        set_selected_player(player_name)
 
     def on_canvas_press(event):
         slot_id = get_slot_at(event.x, event.y)
@@ -1240,6 +1247,8 @@ def view_disposition():
                     assign_player_to_slot(player_name, slot_id)
                 else:
                     pick_player_from_slot(slot_id, event)
+            else:
+                clear_player_selection()
 
     def on_canvas_drag(event):
         if drag_state["type"] != "slot":
